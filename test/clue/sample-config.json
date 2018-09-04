@@ -1,0 +1,15 @@
+{
+    "redex": {
+      "passes": [
+          "SamplePass#1",
+          "SamplePass#2"
+        ]
+    },
+    "SamplePass#1": { // Note: you can add a comment
+      "foo": "bar"
+    },
+    "SamplePass#2": { // Note: another comment
+      "foo": "baz",
+      "foof": null
+    }
+}

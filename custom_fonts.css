@@ -1,0 +1,28 @@
+
+body, table, div, p, dl {
+        font: 400 20px/28px Roboto,sans-serif;
+}
+
+p.reference, p.definition {
+        font: 400 20px/28px Roboto,sans-serif;
+}
+
+table.directory {
+  font: 400 20px Roboto,sans-serif;
+}
+
+#nav-tree {
+  font-size:20px;
+}
+
+#nav-tree .label {
+  font: 18px 'Lucida Grande',Geneva,Helvetica,Arial,sans-serif;
+}
+
+.sm-dox a {
+  font-size: 16px;
+}
+
+.sm-dox ul {
+  font-size: 16px;
+}
