@@ -1,7 +1,7 @@
 /**
-  @file 
+  @file
   @brief Sample test file.
-  
+
   This is a file that you can copy in order to create your own test suite.
 
  */
@@ -28,7 +28,7 @@ TEST(SampleTests, sample1) {
 }
 
 
-class SamplePass : public Pass 
+class SamplePass : public Pass
 {
 public:
   SamplePass() : Pass("SamplePass") { }
@@ -39,10 +39,10 @@ public:
   size_t eval_calls = 0;
   size_t run_calls = 0;
 
-  virtual void configure_pass(const PassConfig& pc) override {
+  virtual void configure_pass(const JsonWrapper& pc) override {
     pc.get("foo", "void", param);
 
-    configure_calls++; 
+    configure_calls++;
   }
 
   virtual void eval_pass(DexStoresVector&, ConfigFiles&, PassManager&) override {
@@ -90,7 +90,7 @@ TEST_F(ClueTest, sample2) {
   std::vector<Pass*> passes { sample_pass };
   run_passes(passes);
 
-  // Note that configure_pass was not called. 
+  // Note that configure_pass was not called.
   // This is because the PassManager was not configured, therefore it
   // just ran each pass in array `passes` unconfigured.
   EXPECT_EQ(0, sample_pass->configure_calls);
@@ -137,7 +137,7 @@ TEST_F(ClueTest, sample3) {
       }
   }
   );
-  
+
   std::cerr << config << std::endl;
 
   run_passes(passes);
@@ -171,4 +171,3 @@ TEST_F(ClueTest, sample4) {
   EXPECT_EQ(2, sample_pass->run_calls);
   EXPECT_EQ("baz", sample_pass->param);
 }
-

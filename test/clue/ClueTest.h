@@ -8,37 +8,27 @@
 #include <string>
 #include <vector>
 
+#include <gtest/gtest.h>
+
 #include "DexStore.h"
 #include "RedexContext.h"
 #include "Pass.h"
 #include "ProguardConfiguration.h"
-#include "RedexTest.h"
 
 
 /**
   @brief Test fixture class for clue-redex unit tests.
 
   This fixture class initializes the @ref RedexContext, so that a run of redex-all
-  can be simulated. The fixture can load .dex files and external jars, accept 
+  can be simulated. The fixture can load .dex files and external jars, accept
   configuration options and execute a number of passes.
 
-  Current limitations: 
+  Current limitations:
   * only one DexStore is supported
 
 */
-struct ClueTest : public RedexTest {
-
-  /// Constructs the fixture
-  ClueTest();
-
-private:
-  /// List of DexStore stores for the test context
-  std::vector<DexStore> m_stores;
-
-  /// Vector of external classes
-  Scope m_external_classes;
-
-
+class ClueTest : public testing::Test
+{
 public:
 
   /// Json object containing configuration options for the passes
@@ -54,7 +44,7 @@ public:
   	@brief Load classes from a .dex file
 
   	The method will load classes found in the `dexfile`.
-  	The dexfile will be added to the stores. 
+  	The dexfile will be added to the stores.
 
   	In a multidex scenario, dex files should be loaded in the order that they
   	would be named in the .apk file, i.e., first the "classes" file, then the
@@ -77,7 +67,7 @@ public:
     @brief Set the config field to JSON from parsing a string
 
     The value of the `config` field is set to the Json::Value obtained by
-    parsing the argument. 
+    parsing the argument.
 
     @param json a string used to set the `config` field
     @throws std::runtime_error if the parsing failed
@@ -117,15 +107,25 @@ public:
               bool is_art_build = false);
 
 
+  /// Constructs the fixture
+  ClueTest();
+
   /// Destroys the fixture
   ~ClueTest();
+
+private:
+  /// List of DexStore stores for the test context
+  std::vector<DexStore> m_stores;
+
+  /// Vector of external classes
+  Scope m_external_classes;
 };
 
 
 /**
   @brief Convenience macro for calling ClueTest::parse_config()
 
-  With this macro, one can create easily JSON code in an editor-friendly way. 
+  With this macro, one can create easily JSON code in an editor-friendly way.
 
   Use it from within a test as follows:
 
@@ -138,4 +138,3 @@ public:
 
  */
 #define CLUETEST_CONFIG(...) parse_config(#__VA_ARGS__)
-

@@ -18,6 +18,7 @@ AC_PROG_CC
 
 # Checks for java compiler (used in tests)
 AC_CHECK_CLASSPATH
+AX_JAVA_OPTIONS
 AX_PROG_JAVAC
 AX_PROG_JAVA
 

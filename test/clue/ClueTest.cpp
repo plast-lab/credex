@@ -11,12 +11,15 @@
 ClueTest::ClueTest()
 	: config(Json::nullValue)
 {
+	g_redex = new RedexContext();
 	DexStore root("classes");
 	m_stores.emplace_back(std::move(root));
 }
 
 ClueTest::~ClueTest()
-{ }
+{
+	delete g_redex;
+}
 
 
 void ClueTest::load_dex(const std::string& dexfile)

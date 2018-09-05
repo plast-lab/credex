@@ -7,8 +7,7 @@ redex_srcdir=$(top_srcdir)/redex
 # Include paths for tests
 #
 AM_CPPFLAGS = \
-	-I$(redex_srcdir)/test/googletest-release-1.7.0/include \
-	-I$(redex_srcdir)/test/common \
+	-I$(top_srcdir)/test/googletest-release-1.7.0/include \
 	-I$(redex_srcdir)/liblocator \
 	-I$(redex_srcdir)/libredex \
 	-I$(redex_srcdir)/libresource \
@@ -59,20 +58,21 @@ TESTS = \
 #
 # Libraries to link with the tests
 #
-TEST_LIBS = libcluetesting.la $(top_builddir)/test/libgtest_main.la $(top_builddir)/libredex.la
+TEST_LIBS = libcluetesting.la $(top_builddir)/test/libgtest_main.la \
+  $(top_builddir)/redex/libredex.la
 
 #
 #  sample_test definitions
 #
 
 sample_test_SOURCES = SampleTest.cpp
-sample_test_LDADD = $(TEST_LIBS)
+sample_test_LDADD = $(TEST_LIBS) -ldl
 EXTRA_sample_test_DEPENDENCIES = sample-classes.dex
 
 sample-classes.jar: SampleClass.java
 	mkdir -p sample-classes
-	$(JAVAC) -d sample-classes $^
-	$(JAR) cf $@ -C sample-classes .
+	$(JAVAC) $(JAVACFLAGS) --release 8 -d sample-classes $^
+	jar cf $@ -C sample-classes .
 
 sample-classes.dex: sample-classes.jar
 	$(DX) --dex --output=$@ $^
