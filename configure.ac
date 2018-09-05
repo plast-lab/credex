@@ -2,22 +2,29 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([credex], [1.0], [yannis@di.uoa.gr])
-AM_INIT_AUTOMAKE(credex, 0.1.0)
+AC_INIT([credex], [0.1.0], [yannis@di.uoa.gr])
+
+AM_INIT_AUTOMAKE([subdir-objects])
+AC_CONFIG_MACRO_DIR([m4])
+LT_INIT
 
 # clear out default cxx flags (was "-O2 -g") so that they don't override
 # the flags defined in AM_CXXFLAGS
 : ${CXXFLAGS=""}
 
-# Checks for programs.
+# Checks for C++ compiler
 AC_PROG_CXX
 AC_PROG_CC
 
-LT_INIT
+# Checks for java compiler (used in tests)
+AC_CHECK_CLASSPATH
+AX_PROG_JAVAC
+AX_PROG_JAVA
 
-AM_INIT_AUTOMAKE([subdir-objects])
-#AC_CONFIG_MACRO_DIR([m4])
+# Checks for Android SDK (used in tests)
+ANDROID_SDK
 
+# Python is needed for the credex wrapper
 AM_PATH_PYTHON([3.0], [], [AC_MSG_ERROR([Redex requires python3])])
 
 # Checks for libraries.
@@ -58,9 +65,12 @@ AC_FUNC_MMAP
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([clock_gettime gettimeofday memmove memset munmap regcomp strchr strdup strerror strrchr strstr strtol])
 
-AC_CONFIG_SUBDIRS([redex])
+### This is not enabled, as it would interfere with the testing code
+### AC_CONFIG_SUBDIRS([redex])
 
 AC_CONFIG_FILES([
         Makefile
+        test/Makefile
+        test/clue/Makefile
 ])
 AC_OUTPUT

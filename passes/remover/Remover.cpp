@@ -146,6 +146,8 @@ void RemoverPass::run_pass(DexStoresVector& dexen, ConfigFiles& cfg, PassManager
   CMethodStrs aMethodStrs;
   std::ifstream aFile;
 
+  // TODO: (vsam) These should be put in the PassConfig section!
+#if 0
   f_name_rmethods = cfg.get_rmethods();
   if (f_name_rmethods.empty()) {
       f_name_rmethods = "methods_to_remove.csv";
@@ -159,6 +161,10 @@ void RemoverPass::run_pass(DexStoresVector& dexen, ConfigFiles& cfg, PassManager
       std::cout << "Using default file " << f_name_amethods << std::endl;
   } else
       std::cout << "Using custom file " << f_name_amethods << std::endl;
+#endif
+
+cfg.get_json_config().get("rmethods", "methods_to_remove.csv", f_name_rmethods);
+cfg.get_json_config().get("amethods", "methods_to_make_abstract.csv", f_name_amethods);
 
   std::cout << "Reading list of methods to remove from " << f_name_rmethods << "..." << std::endl;
   read_methods(f_name_rmethods, rMethodStrs);

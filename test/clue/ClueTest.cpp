@@ -10,7 +10,7 @@
 
 ClueTest::ClueTest()
 	: config(Json::nullValue)
-{ 
+{
 	DexStore root("classes");
 	m_stores.emplace_back(std::move(root));
 }
@@ -21,12 +21,12 @@ ClueTest::~ClueTest()
 
 void ClueTest::load_dex(const std::string& dexfile)
 {
-	DexClasses classes;	
+	DexClasses classes;
 	try {
 	 	classes = load_classes_from_dex(dexfile.c_str());
-	} 
+	}
 	catch(...) {
-		// prints diagnostic and rethrows 
+		// prints diagnostic and rethrows
 	    std::cerr <<
 	        "Unexpected exception, diagnostic information follows:\n" <<
     	    boost::current_exception_diagnostic_information();
@@ -56,11 +56,11 @@ void ClueTest::run_passes(const std::vector<Pass*>& passes,
 	// This will run passes that check the manager.no_proguard_rules() guard.
 	// If not called, passes that require proguard "keep rules" would be skipped
 	manager.set_testing_mode();
-	manager.run_passes(m_stores, m_external_classes, cfg);
+	manager.run_passes(m_stores, cfg);
 }
 
 
-void ClueTest::parse_config(const char* js) 
+void ClueTest::parse_config(const char* js)
 {
   std::string jss(js);
   Json::Reader reader;
@@ -71,7 +71,7 @@ void ClueTest::parse_config(const char* js)
   }
 }
 
-void ClueTest::load_config(const std::string& cfgfile) 
+void ClueTest::load_config(const std::string& cfgfile)
 {
   std::ifstream cfgin;
   cfgin.open(cfgfile.c_str(), std::ifstream::in);
@@ -82,4 +82,3 @@ void ClueTest::load_config(const std::string& cfgfile)
     throw std::runtime_error(what.c_str());
   }
 }
-
