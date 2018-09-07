@@ -66,12 +66,14 @@ AC_FUNC_MMAP
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([clock_gettime gettimeofday memmove memset munmap regcomp strchr strdup strerror strrchr strstr strtol])
 
-### This is not enabled, as it would interfere with the testing code
-### AC_CONFIG_SUBDIRS([redex])
 
 AC_CONFIG_FILES([
         Makefile
         test/Makefile
         test/clue/Makefile
 ])
+
+### This is not enabled, as it would interfere with the testing code
+AC_CONFIG_SUBDIRS([redex])
+
 AC_OUTPUT

@@ -1,2 +1,2 @@
 # credex
-Extending facebook/redex with passes driven from external program analysis
+Extending facebook/redex with passes driven from external program analysis.

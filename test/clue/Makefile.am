@@ -54,6 +54,7 @@ libcluetesting_la_SOURCES= ClueTest.cpp
 #
 TESTS = \
 	sample_test
+VERBOSE=1
 
 #
 # Libraries to link with the tests
