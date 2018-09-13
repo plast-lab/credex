@@ -47,7 +47,7 @@ AC_DEFUN([ANDROID_SDK],
 	AC_DEFINE_UNQUOTED(WITH_ANDROID_BUILD_TOOLS,"${android_bt}",[the path to Android SDK build tools])
 	AC_ARG_VAR(ANDROID_BUILD_TOOLS,[Path to the Android SDK build tools])
 	AC_SUBST(ANDROID_BUILD_TOOLS,$android_bt)
-	AC_PATH_PROG([DX],[dx],[
+	AC_PATH_PROG([DX],[dx],
 		AC_MSG_ERROR(Could not find the dx compiler in Android build tools)
-	],[$android_bt])
+	,[$android_bt])
 ])
