@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 
 #include "PlastDVParser.h"
 
@@ -17,7 +18,7 @@ std::string PlastDoopParser::parse_invok_site(std::string str, PlastInvocSite& s
   PlastDoopParser::disc_empty(str, ptr);
   site.n = std::stoi(str.substr(ptr, str.length()-ptr));
 
-  
+
   std::string ns = std::to_string(site.n);
   ptr += ns.length();
   return str.substr(ptr, str.length()-ptr);
@@ -28,7 +29,6 @@ std::string PlastDoopParser::parse_method_spec(std::string str, PlastMethodSpec&
   int ptr = 0;
   PlastDoopParser::get_cls_name(str, ptr, spec);
   PlastDoopParser::get_method_p(str, ptr, spec);
-  std::cout << spec.cls << std::endl;
 
   return str.substr(ptr, str.length()-ptr);
 
@@ -126,7 +126,7 @@ void PlastDoopParser::get_callee(std::string str, int& ptr, PlastInvocSite& site
   while (str[ptr+i] != '/' && !isspace(str[ptr+i]))
     i++;
 
-  site.callee = str.substr(ptr, i);
+  site.callee = simplify_name(str.substr(ptr, i));
   ptr += i;
   PlastDoopParser::disc_empty(str, ptr);
   if (str[ptr] != '/')
@@ -198,4 +198,90 @@ bool PlastMethodSpec::compare(const DexMethodRef* dm) const {
   }
   return true;
 
+}
+
+/* transforms a java-style declared method to a dalvik one
+ * example
+ * java : lang.java.String int indexOf(lang.java.String, int)
+ * dalvik Lcom/java/lang/String; I endsWith(Lcom/java/lang/String;I)
+ * mainly it will translate types and won't bother with method prototype
+ * annotation differences
+ */
+void PlastMethodSpec::to_dalvik(void) {
+  rtype = PlastDoopParser::type_to_dalvik(rtype);
+  cls = PlastDoopParser::type_to_dalvik(cls);
+  for (int i=0; i < args->size(); i++)
+    args->at(i) = PlastDoopParser::type_to_dalvik(args->at(i));
+
+}
+
+void PlastInvocSite::to_dalvik(void) {
+  cls = PlastDoopParser::type_to_dalvik(cls);
+  method.to_dalvik();
+}
+
+
+std::string PlastDoopParser::basic_to_dalvik(const std::string& str) {
+  if (!str.compare("void"))
+    return std::string("V");
+  if (!str.compare("boolean"))
+    return std::string("Z");
+  if (!str.compare("byte"))
+    return std::string("B");
+  if (!str.compare("short"))
+    return std::string("S");
+  if (!str.compare("char"))
+    return std::string("C");
+  if (!str.compare("int"))
+    return std::string("I");
+  if (!str.compare("long"))
+    return std::string("J");
+  if (!str.compare("float"))
+    return std::string("F");
+  if (!str.compare("double"))
+    return std::string("D");
+
+  std::string rv = std::string(std::string("L")+str);
+  std::replace(rv.begin(), rv.end(), '.', '/');
+  rv.push_back(';');
+
+  return rv;
+}
+//TODO take care of whitespace that may be here because it will cause a problem
+std::string PlastDoopParser::type_to_dalvik(const std::string& str) {
+  //first consume all the array identifiers
+
+  std::string tmp(str);
+
+
+  int i = 0,j=tmp.length();
+  int total = 0;
+  std::string array_anno;
+  for (;;) {
+    i = tmp.rfind("[]");
+    if (i == -1)
+      break;
+    //burn the findings
+    tmp[i] = '*';
+    tmp[i+1]= '*';
+    array_anno += "[";
+    j = i;
+  }
+  while (j >= 0 && isspace(tmp[j-1]))
+    j--;
+
+  std::string tmp1(str.substr(0, j));
+
+  return std::string(array_anno+PlastDoopParser::basic_to_dalvik(tmp1));
+}
+//simplifies a name from android.os.Parcel.createTypeArray
+// to createTypeArray
+//TODO maybe change that to be more specific
+//have to change deveritualize targets function
+std::pair<std::string, std::string> PlastDoopParser::simplify_name(const std::string& str) {
+
+  int idx = str.rfind('.');
+  std::string method =  std::string(str.substr(idx+1, str.length()-idx-1));
+  std::string cls =  std::string(str.substr(0, idx));
+  return std::pair<std::string, std::string>(type_to_dalvik(cls), method);
 }
