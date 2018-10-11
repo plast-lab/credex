@@ -49,10 +49,13 @@ void PlastDevirtualizationPass::run_pass(DexStoresVector& stores, ConfigFiles& C
   parse_instructions_m(&devirt_ms, methoddevirtfile);
   //config for devirtualizing only vmethods
 
-
   Scope scope = build_class_scope(stores);
+  gather_statistics(scope);
+
+
   devirt_methods(scope, devirt_ms);
   devirt_targets(scope, devirt_ins);
+
 
   //metrics names are not correlated with their corresponding
   //meaning, I just re-used the same structured
@@ -61,6 +64,14 @@ void PlastDevirtualizationPass::run_pass(DexStoresVector& stores, ConfigFiles& C
     <<m_metrics.num_virtual_calls << "\nSuper:" << m_metrics.num_super_calls <<
     "\nDirect:" << m_metrics.num_direct_calls << std::endl;}
   //TODO clean up
+
+  std::cout << "Invok V:" << l_metrics.num_invok_virtual << std::endl;
+    std::cout << "TOTAL I:" << l_metrics.num_invok_interface << std::endl;
+  std::cout << "New M:" << l_metrics.num_new_methods << std::endl;
+  std::cout << "Extra OP:" << l_metrics.num_extra_opcodes << std::endl;
+  std::cout << "TOTAL INVOK:" << l_metrics.num_total_invocations << std::endl;
+  std::cout << "TOTAL METH:" << l_metrics.num_total_methods << std::endl;
+  std::cout << "TOTAL INTER:" << l_metrics.num_total_interface << std::endl;
   return ;
 
 }
@@ -191,7 +202,6 @@ void PlastDevirtualizationPass::devirt_methods(std::vector<DexClass*>& scope,
       if (method->compare(m)) {
         devirtualizable_methods.insert(m);
         delete method;
-        m_metrics.num_direct_calls++;
         break;
       }
       //again ignore naming, I just re-use an existing struct
@@ -273,12 +283,13 @@ void PlastDevirtualizationPass::devirt_targets(
   }
 }
 
-void PlastDevirtualizationPass::create_static_copy(
-	DexClass *cls, const PlastMethodSpec &mp, DexMethodRef*& d) {
+void PlastDevirtualizationPass::create_static_copy(DexClass *cls,
+  const PlastMethodSpec &mp, DexMethodRef*& d, bool invok_interface) {
   //creates a static version of an existing function to
   // allow devirtualization
 
   DexMethod* method = NULL;
+  d = NULL;
 
   //look if the method already exists
   auto newname = DexString::make_string((statprefix+ mp.name).c_str());
@@ -306,6 +317,9 @@ void PlastDevirtualizationPass::create_static_copy(
       return;
     }
   }
+  // if we only seek to devirtualize invok interface , stop here
+  if (!invok_interface && only_devirtualize_invok_interface)
+    return;
 
   for (auto meth :cls->get_vmethods()) {
     if (mp.compare(meth)) {
@@ -353,7 +367,8 @@ void PlastDevirtualizationPass::create_static_copy(
 
   method->set_virtual(false);
   cls->add_method(method);
-
+  l_metrics.num_new_methods++;
+  l_metrics.num_extra_opcodes += code->sum_opcode_sizes();
   d = method;
 }
 
@@ -366,13 +381,20 @@ void PlastDevirtualizationPass::devirtualize(IRInstruction *insn, PlastMethodSpe
     std::cout << "Plast: Class not found!" << std::endl;
       return ;
   }
-  create_static_copy(cls, *spec, ref);
+  // we don't want to devirtualize invocations that aren't
+  // invoke-interface
+
+  create_static_copy(cls, *spec, ref, insn->opcode() == OPCODE_INVOKE_INTERFACE);
+
   if (ref == NULL)
     return;
+
+  if (is_invoke_virtual(insn->opcode()))
+    l_metrics.num_invok_virtual++;
+  if (insn->opcode() == OPCODE_INVOKE_INTERFACE)
+    l_metrics.num_invok_interface++;
+
   insn->set_opcode(OPCODE_INVOKE_STATIC)->set_method(ref);
-
-
-
   //zip_virtual_version(cls, spec, ref);
 }
 
@@ -543,6 +565,45 @@ void PlastDevirtualizationPass::staticize_methods_using_this(
   m_metrics.num_methods_not_using_this += methods.size();
 }
 
+void PlastDevirtualizationPass::gather_statistics(const std::vector<DexClass*>& scope) {
+
+    for (auto const &cls : scope) {
+
+      std::vector<DexMethod*>& dmeths= cls->get_dmethods();
+      for (auto const &dmeth: dmeths) {
+        l_metrics.num_total_methods++;
+        auto irc = dmeth->get_code();
+        if (!irc)
+          continue;
+        auto ircit = InstructionIterable(irc);
+        for (auto it1 = ircit.begin(); it1 != ircit.end(); it1++) {
+          IRInstruction* insn = it1->insn;
+          if (insn->has_method()&& is_invoke_virtual(insn->opcode())) {
+            l_metrics.num_total_invocations++;
+          }
+        }
+      }
+
+
+      std::vector<DexMethod*>& vmeths= cls->get_vmethods();
+      for (auto const &vmeth: vmeths) {
+        l_metrics.num_total_methods++;
+        auto irc = vmeth->get_code();
+        if (!irc)
+          continue;
+        auto ircit = InstructionIterable(irc);
+        for (auto it1 = ircit.begin(); it1 != ircit.end(); it1++) {
+          IRInstruction* insn = it1->insn;
+          if (insn->has_method() && is_invoke_virtual(insn->opcode())) {
+            l_metrics.num_total_invocations++;
+          }
+          if (insn->has_method() && insn->opcode() == OPCODE_INVOKE_INTERFACE) {
+            l_metrics.num_total_interface++;
+          }
+      }
+    }
+  }
+}
 
 
 static PlastDevirtualizationPass s_pass;
