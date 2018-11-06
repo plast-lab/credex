@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 
-SUBDIRS = . test redex
+SUBDIRS = . test
 
 ACLOCAL_AMFLAGS = -I m4
 AM_CXXFLAGS = --std=gnu++14 -O3 -Wall -g
@@ -45,7 +45,7 @@ credex_all_LDFLAGS = \
 #
 # redex: Python driver script
 #
-bin_SCRIPTS = credex
+bin_SCRIPTS = credex redex/apkutil
 CLEANFILES = credex
 
 PYTHON_SRCS := $(redex_srcdir)/redex.py \
