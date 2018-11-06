@@ -68,12 +68,13 @@ AC_CHECK_FUNCS([clock_gettime gettimeofday memmove memset munmap regcomp strchr 
 
 
 AC_CONFIG_FILES([
-        Makefile
+        Makefile        
         test/Makefile
         test/clue/Makefile
 ])
 
-### This is not enabled, as it would interfere with the testing code
-AC_CONFIG_SUBDIRS([redex])
+### This is not enabled,  --deleted: as it would interfere with the testing code
+### as we are taking over redex building
+## AC_CONFIG_SUBDIRS([redex])
 
 AC_OUTPUT
