@@ -5,8 +5,8 @@
 **/*~
 **/Makefile
 **/Makefile.in
-
-/.libs
+**/lib*.la
+**/.libs
 /aclocal.m4
 /autom4te.cache
 /cmd.txt
@@ -27,6 +27,9 @@
 /redex
 /redex-all
 /redex.tar.gz
+/credex
+/credex-all
+/credex.tar.gz
 /redexdump
 /stamp-h1
 /test-driver
