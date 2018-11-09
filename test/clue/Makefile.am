@@ -40,7 +40,8 @@ AM_CPPFLAGS = \
 	-I$(redex_srcdir)/tools/redex-all \
 	-I$(redex_srcdir)/util \
 	-I$(redex_srcdir)/shared \
-	-I/usr/include/jsoncpp
+	-I/usr/include/jsoncpp \
+	-I$(top_srcdir)/passes/explicit_inline 
 
 
 # Rules for making the cluetesing library
@@ -53,7 +54,8 @@ libcluetesting_la_SOURCES= ClueTest.cpp
 # The list of tests to run
 #
 TESTS = \
-	sample_test
+	sample_test \
+	explicit_inline_test
 VERBOSE=1
 
 #
@@ -70,6 +72,16 @@ sample_test_SOURCES = SampleTest.cpp
 sample_test_LDADD = $(TEST_LIBS) -ldl
 EXTRA_sample_test_DEPENDENCIES = sample-classes.dex
 
+explicit_inline_test_SOURCES = ExplicitInlineTest.cpp
+explicit_inline_test_LDADD = $(TEST_LIBS) \ 
+							 $(top_srcdir)/passes/explicit_inline/ExplicitInlinePass.o \
+							 $(top_srcdir)/redex/libredex/DexAsm.o \
+							 $(top_srcdir)/passes/explicit_inline/FileParser.o -ldl
+EXTRA_explicit_inline_test_DEPENDENCIES = simpleTest.dex \
+										  recursionTest.dex \
+										  guardTest.dex
+
+
 sample-classes.jar: SampleClass.java
 	mkdir -p sample-classes
 	$(JAVAC) $(JAVACFLAGS) --release 8 -d sample-classes $^
@@ -77,6 +89,34 @@ sample-classes.jar: SampleClass.java
 
 sample-classes.dex: sample-classes.jar
 	$(DX) --dex --output=$@ $^
+										
+
+### simple case to test inlining ###
+simpleTest.jar: SimpleTest.java
+	mkdir -p simpleTest
+	$(JAVAC) $(JAVACFLAGS) --release 8 -d simpleTest $^
+	jar cf $@ -C simpleTest .
+
+simpleTest.dex: simpleTest.jar
+	$(DX) --dex --output=$@ $^
+
+### test inlining with recursive calls ###
+recursionTest.jar: RecursionTest.java
+	mkdir -p recursionTest
+	$(JAVAC) $(JAVACFLAGS) --release 8 -d recursionTest $^
+	jar cf $@ -C recursionTest .
+
+recursionTest.dex: recursionTest.jar
+	$(DX) --dex --output=$@ $^
+
+### test inlining with guards ###
+guardTest.jar: GuardTest.java
+	mkdir -p guardTest
+	$(JAVAC) $(JAVACFLAGS) -cp ./simpleTest --release 8 -d guardTest $^
+	jar cf $@ -C guardTest .
+
+guardTest.dex: guardTest.jar
+	$(DX) --dex --output=$@ $^		
 
 #
 # Test programs plus utilities

@@ -88,6 +88,7 @@ noinst_PROGRAMS = credex-all
 
 credex_all_SOURCES = \
 	passes/remover/Remover.cpp \
+	passes/explicit_inline/FileParser.cpp \
 	passes/explicit_inline/ExplicitInlinePass.cpp \
 	passes/plast-devirt/PlastDevirtualizationPass.cpp \
 	passes/plast-devirt/PlastDVParser.cpp

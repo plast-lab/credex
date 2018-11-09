@@ -1,8 +1,5 @@
-#include "Walkers.h"
-
 #include "Inliner.h"
 #include "Creators.h"
-#include "FileParser.h"
 #include "VirtualScope.h"
 #include "ClassHierarchy.h"
 #include "ExplicitInlinePass.h"
@@ -62,119 +59,140 @@ void ExplicitInlinePass::create_guards(IRList::iterator& main_block_it,
   true_block_it = caller_code->insert_after(goto_it, *eb_entry);  
 }
 
+void ExplicitInlinePass::eval_pass(DexStoresVector& stores,
+                                   ConfigFiles& cfg,
+                                   PassManager& mgr)
+{
+  FileParser::parse_file("../../imethods.txt", imethods, sorted_callers);  
+  std::cout << "file parsing ended " << imethods.size() << std::endl;
+}
 
 void ExplicitInlinePass::run_pass(DexStoresVector& stores, 
                                   ConfigFiles& cfg, 
                                   PassManager& mgr) 
 {
-  IRList::iterator it;  
+  DexMethod *callee;
+  MethodsToInline mti;
   uint16_t offset, idx;
+  IRList::iterator it, it2;  
   MethodImpls method_impls;
-  MethodsToInline imethods;
-  DexMethod *caller, *callee;
   std::string caller_str, callee_name;
 
-  FileParser::parse_file("imethods.txt", imethods, stores);
+  for(auto caller : sorted_callers){
 
-  for(auto map_entry : imethods){
-
-    FileParser::analyze_invoc_id(map_entry.first, caller_str, callee_name, offset);
-    FileParser::to_dalvik_format(caller_str);
-    FileParser::find_def(caller_str, caller, stores);
-    // std::cout << "caller_str = " << caller_str << std::endl;
-    // std::cout << "offset = " << offset << std::endl;
-    // std::cout << "caller = " << caller << std::endl;
-    // std::cout << "callee_name = " << callee_name << std::endl;
-
-    // std::cout << SHOW(caller->get_code()) << std::endl;
-
-    idx = 0;    
+    mti = imethods[caller];
     auto caller_code = caller->get_code();
     auto caller_mc = new MethodCreator(caller);
-    auto ii = InstructionIterable(caller_code);
 
-    for(it = ii.begin().unwrap(); it != ii.end().unwrap(); it++){
-      if(it->insn->opcode() == OPCODE_INVOKE_VIRTUAL ||
-         it->insn->opcode() == OPCODE_INVOKE_INTERFACE){
-        std::string meth, name;
-        name = it->insn->get_method()->c_str();
-        meth = it->insn->get_method()->get_class()->get_name()->str();
-        meth = JavaNameUtil::internal_to_external(meth) + "." + name;
+    for(auto map_it = mti.begin(); map_it != mti.end(); map_it++){
+      inline_stats.callsites++;
 
-        if(callee_name == meth && idx++ == offset)  break;
+      for(it = caller_code->begin(); it != caller_code->end(); it++){
+        if (it->type != MFLOW_OPCODE) continue;
+        if(!is_invoke(it->insn->opcode())){
+          continue;
+        }
+
+        
+        if(*(map_it->first.insn) == *(it->insn)){
+          break;
+       }
       }
+
+      //the invocation is already inlined or removed
+      //by previous optimizations
+      if(it == caller_code->end()){
+        // std::cout << "not in list" << std::endl;
+        continue;
+      } 
       
-    }
+      
+      method_impls = map_it->second;
+      if(method_impls.size() > 1){
+        inline_stats.need_guards++;
 
-    method_impls = map_entry.second;
-    if(method_impls.size() > 1){
-
-      DexType* type;
-      uint16_t this_reg;
-      IRInstruction *insn;
-      IRList::iterator erase_it, true_block_it, 
+        DexType* type;
+        uint16_t this_reg;
+        IRInstruction *insn;
+        IRList::iterator erase_it, true_block_it, 
         main_block_it, false_block_it, instanceof_it;
 
-      erase_it = it;  //iterator to erase the invoke instruction after it's inlined
-      true_block_it = it;
-      insn = it->insn;
-      this_reg = insn->src(0);
-      main_block_it = ++it;
-      
-      for(auto callee : method_impls){
-        type = callee->get_class();
+        erase_it = it;  //iterator to erase the invoke instruction after it's inlined
+        true_block_it = it;
+        insn = it->insn;
+        this_reg = insn->src(0);
+        main_block_it = ++it;
+        
+        for(auto callee : method_impls){
+          inline_stats.total_meths++;
+          if(it->insn->opcode() == OPCODE_INVOKE_VIRTUAL)
+            inline_stats.invoke_virtual++;
+          if(it->insn->opcode() == OPCODE_INVOKE_INTERFACE)
+            inline_stats.invoke_interface++;
 
-        //get next free register to use as destination register
-        //for instance_of instruction
-        auto dst_location = caller_code->get_registers_size();
-        caller_code->set_registers_size(dst_location+1);
+          type = callee->get_class();
 
-        create_instanceof(true_block_it, instanceof_it, caller_code,
-                          type, this_reg, dst_location);
-        create_guards(main_block_it, true_block_it, false_block_it, 
-            instanceof_it, idx, offset, dst_location, caller_code);
+          //get next free register to use as destination register
+          //for instance_of instruction
+          auto dst_location = caller_code->get_registers_size();
+          caller_code->set_registers_size(dst_location+1);
 
-        //create new invoke instruction to add to the false block
-        //in order to inline the callee later
-        auto invoke_insn = new IRInstruction(insn->opcode());
-        invoke_insn->set_method(callee)->set_arg_word_count(insn->arg_word_count());
+          create_instanceof(true_block_it, instanceof_it, caller_code,
+              type, this_reg, dst_location);
+          create_guards(main_block_it, true_block_it, false_block_it, 
+              instanceof_it, idx, offset, dst_location, caller_code);
 
-        for (uint16_t i = 0; i < insn->srcs().size(); i++) {
-          invoke_insn->set_src(i, insn->srcs().at(i));
+          //create new invoke instruction to add to the false block
+          //in order to inline the callee later
+          auto invoke_insn = new IRInstruction(insn->opcode());
+          invoke_insn->set_method(callee)->set_arg_word_count(insn->arg_word_count());
+
+          for (uint16_t i = 0; i < insn->srcs().size(); i++) {
+            invoke_insn->set_src(i, insn->srcs().at(i));
+          }
+
+          if (false_block_it == caller_code->end()) {
+            caller_code->push_back(invoke_insn);
+            std::prev(caller_code->end());
+          } else {
+            false_block_it = caller_code->insert_after(false_block_it, invoke_insn);
+          }
+
+          caller_mc->create();
+          inliner::inline_method(caller->get_code(),
+                                 callee->get_code(),
+                                 false_block_it);
         }
-        if (false_block_it == caller_code->end()) {
-          caller_code->push_back(invoke_insn);
-          std::prev(caller_code->end());
-        } else {
-          false_block_it = caller_code->insert_after(false_block_it, invoke_insn);
+
+        // if the callee returns anything other than void,
+        //find the move-result after the invoke
+        auto move_res = erase_it;
+        while (move_res++ != caller_code->end()){
+          if (move_res->type == MFLOW_OPCODE && 
+              is_move_result(move_res->insn->opcode())) break;
         }
-
-        inliner::inline_method(caller->get_code(),
-                               callee->get_code(),
-                               false_block_it);      
+        //erases the iterator and deletes the MethodItemEntry
+        caller_code->erase_and_dispose(erase_it);
+        caller_code->erase_and_dispose(move_res);    
       }
+      else if(method_impls.size() == 1){
+        inline_stats.total_meths++;
+        if(it->insn->opcode() == OPCODE_INVOKE_VIRTUAL)
+          inline_stats.invoke_virtual++;
+        if(it->insn->opcode() == OPCODE_INVOKE_INTERFACE)
+          inline_stats.invoke_interface++;
 
-      // if the callee returns anything other than void,
-      //find the move-result after the invoke
-      auto move_res = erase_it;
-      while (move_res++ != caller_code->end()){
-        if (move_res->type == MFLOW_OPCODE && 
-          is_move_result(move_res->insn->opcode())) break;
+        callee = *method_impls.begin();
+        inliner::inline_method(caller->get_code(), callee->get_code(), it);
       }
-      //erases the iterator and deletes the MethodItemEntry
-      caller_code->erase_and_dispose(erase_it);
-      caller_code->erase_and_dispose(move_res);    
     }
-    else if(method_impls.size()){
-      std::cout << *method_impls.begin() << std::endl;
-      callee = *method_impls.begin();
-      inliner::inline_method(caller->get_code(), callee->get_code(), it);
-    }
-    caller_mc->create(); 
-    // caller_code->build_cfg();
-    // std::cout << SHOW(caller_code->cfg()) << std::endl;
   }           
-  std::cout << SHOW(caller->get_code()) << std::endl;
+  std::cout << "Total inlined methods : " << inline_stats.total_meths << std::endl;
+  std::cout << "Total invocation sites : " << inline_stats.callsites << std::endl;
+  std::cout << "Total virtual invocations : " << inline_stats.invoke_virtual << std::endl;
+  std::cout << "Total interface invocations : " << inline_stats.invoke_interface << std::endl;
+  std::cout << "Total virtual methods inlined with guarding : " << inline_stats.need_guards;
+  std::cout << std::endl << std::endl;
   std::cout << "Explicit inline pass done." << std::endl;
 }
 
