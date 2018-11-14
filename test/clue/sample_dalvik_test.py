@@ -3,7 +3,7 @@ import sys
 
 
 if __name__=='__main__':
-    emu = emulator('myavd1')
+    emu = emulator()
     ret = emu.dalvikvm(['org.junit.runner.JUnitCore','clue.testing.SampleClass'],
                    "sample-classes.dex", "junit.dex")
     

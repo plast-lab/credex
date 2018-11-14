@@ -45,7 +45,7 @@ TEST_LIBS = libcluetesting.la $(top_builddir)/test/libgtest_main.la \
 CLASSPATH=$(subst $() $(),:,$(wildcard $(top_builddir)/test/java/*.jar))
 
 junit.dex: $(wildcard $(top_builddir)/test/java/*.jar)
-	$(DX) --dex --output$@ $^
+	$(DX) --dex --output $@ $^
 
 #
 #  sample_test definitions
@@ -67,11 +67,11 @@ sample-classes.dex: sample-classes.jar
 	$(DX) --dex --output=$@ $^
 
 
-EXTRA_sample_dalvik_test.py_DEPENDENCIES = sample-classes.dex junit.dex
+sample_dalvik_test.py: sample-classes.dex junit.dex
 
 
 #
 # Test programs plus utilities
 #
 check_PROGRAMS = sample_test
-
+check_SCRIPTS = sample_dalvik_test.py

@@ -80,9 +80,15 @@ class AndroidSdk:
 
         return Emulator.start(avd, port, self)
         
-    def emulator(self, avd):
+    def emulator(self, avd=None):
         """Return an Emulator object for a given avd"""
 
+        if avd is None:
+            avds = self.get_avds()
+            if len(avds)==0:
+                raise ValueError("There are no AVDs defined")
+            else:
+                avd = avds[0]
         if avd not in self.get_avds():
             raise ValueError("Cannot find AVD "+str(avd))
         
