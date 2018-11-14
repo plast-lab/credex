@@ -20,7 +20,7 @@ libcluetesting_la_SOURCES= ClueTest.cpp
 # Set up for dalvik tests
 #
 TEST_EXTENSIONS= .py
-PY_LOG_COMPILER= python3
+PY_LOG_COMPILER= $(PYTHON)
 AM_TESTS_ENVIRONMENT= PYTHONPATH='$(top_srcdir)/test'; export PYTHONPATH;
 #AM_PY_LOG_FLAGS= -v
 

@@ -26,7 +26,7 @@ AX_PROG_JAVA
 ANDROID_SDK
 
 # Python is needed for the credex wrapper
-AM_PATH_PYTHON([3.0], [], [AC_MSG_ERROR([Redex requires python3])])
+AM_PATH_PYTHON([3.5], [], [AC_MSG_ERROR([CRedex requires python 3.5 or newer])])
 
 # Checks for libraries.
 AX_PTHREAD
