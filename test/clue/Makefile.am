@@ -16,12 +16,19 @@ noinst_LTLIBRARIES = libcluetesting.la
 
 libcluetesting_la_SOURCES= ClueTest.cpp
 
+#
+# Set up for dalvik tests
+#
+TEST_EXTENSIONS= .py
+PY_LOG_COMPILER= python3
+AM_TESTS_ENVIRONMENT= PYTHONPATH='$(top_srcdir)/test'; export PYTHONPATH;
+#AM_PY_LOG_FLAGS= -v
+
 
 #
 # The list of tests to run
 #
-TESTS = \
-	sample_test
+TESTS = sample_test sample_dalvik_test.py
 VERBOSE=1
 
 #
@@ -29,6 +36,16 @@ VERBOSE=1
 #
 TEST_LIBS = libcluetesting.la $(top_builddir)/test/libgtest_main.la \
   $(top_builddir)/libredex.la
+
+
+#
+# Java variables and targets
+# 
+
+CLASSPATH=$(subst $() $(),:,$(wildcard $(top_builddir)/test/java/*.jar))
+
+junit.dex: $(wildcard $(top_builddir)/test/java/*.jar)
+	$(DX) --dex --output$@ $^
 
 #
 #  sample_test definitions
@@ -40,13 +57,21 @@ EXTRA_sample_test_DEPENDENCIES = sample-classes.dex
 
 sample-classes.jar: SampleClass.java
 	mkdir -p sample-classes
-	$(JAVAC) $(JAVACFLAGS) -d sample-classes $^
+	$(JAVAC) $(JAVACFLAGS) -cp $(CLASSPATH) -d sample-classes $^
 	jar cf $@ -C sample-classes .
+
+
+export JAVA=@JAVA@
 
 sample-classes.dex: sample-classes.jar
 	$(DX) --dex --output=$@ $^
 
+
+EXTRA_sample_dalvik_test.py_DEPENDENCIES = sample-classes.dex junit.dex
+
+
 #
 # Test programs plus utilities
 #
-check_PROGRAMS = $(TESTS)
+check_PROGRAMS = sample_test
+

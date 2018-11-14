@@ -7,14 +7,16 @@
 
 import os, io
 import atexit
+import telnetlib
+import re
+import time
 import subprocess as sp
-import threading
 from pathlib import Path, PurePosixPath
-
+from contextlib import closing
+from signal import SIGTERM
 
 EMULATOR = ('emulator','emulator')
 ADB = ('platform-tools','adb')
-
 
 class AndroidSdk:
     """A wrapper to an installed SDK"""
@@ -40,12 +42,89 @@ class AndroidSdk:
 
         self.root = ah
 
-    def emulator(self, avd):
-        """Return a new Emulator for this sdk"""
-        return Emulator(self, avd)
+    def devices(self):
+        out = sp.check_output([self.cmd(*ADB),'devices','-l'])
+        devlist = []
+        with io.StringIO(out.decode('utf-8')) as output:
+            topline = output.readline()
+            assert topline.startswith("List of devices")
+            for line in output.readlines():
+                splitline = line.split()
+                if not splitline:  # skip empty lines
+                    continue
+                assert len(splitline)>=2
+                serial = splitline[0]
+                state = splitline[1]
+                attrs = dict(frag.split(':',maxsplit=1)
+                             for frag in splitline[2:])
+                yield serial,state,attrs
 
+    def device(self, serial):
+        """Return a device object by serial, as reported by adb"""
+        if serial.startswith("emulator-"):
+            port = int(serial[9:])
+            return Emulator(port=port, sdk=self)
+        else:
+            return Device(serial, sdk=self)
+
+    def __new_emulator_at_port(self, avd, port):
+        # Check if port is available
+        try:
+            con = EmulatorConsole(port)
+            con.close()
+            return None
+        except ConnectionRefusedError:
+            pass
+        except:
+            return None
+
+        return Emulator.start(avd, port, self)
+        
+    def emulator(self, avd):
+        """Return an Emulator object for a given avd"""
+
+        if avd not in self.get_avds():
+            raise ValueError("Cannot find AVD "+str(avd))
+        
+        # Try to find an emulator for given avd
+        # by scanning the 64 even ports starting from
+        # 5554
+        for port in range(5554,5554+128,2):
+            try:
+                with closing(EmulatorConsole(port)) as con:
+                    con.auth()
+                    if con.avd==avd:
+                        return Emulator(port)
+            except:
+                pass
+
+        for port in range(5554,5554+128,2):
+            emu = self.__new_emulator_at_port(avd, port)
+            if emu is not None:
+                return emu
+
+        return None
+        
+        
+    def get_avds(self):
+        """Return a list of installed AVD names"""
+        out = sp.check_output([self.cmd(*EMULATOR),'-list-avds'])
+        return [l.rstrip(b"\r\n").decode('utf-8')
+                for l in io.BytesIO(out).readlines()]
+    
     def cmd(self, *pc):
         return os.path.join(self.root, *pc)
+
+SDK = None
+try:
+    SDK = AndroidSdk()
+    emulator = SDK.emulator
+    device= SDK.device
+    devices = SDK.devices
+    get_avds = SDK.get_avds
+    cmd = SDK.cmd    
+except:
+    pass
 
 
 class Device:
@@ -57,7 +136,7 @@ class Device:
     perform various operations.
     """
     
-    def __init__(self, serial=None, sdk=None):
+    def __init__(self, serial=None, sdk=SDK):
         """
         Construct a device with given serial name and accessible
         via the provided Android SDK.
@@ -78,14 +157,6 @@ class Device:
         """
         self.serial = serial
 
-    @staticmethod
-    def __add_args(cmdlist, args):
-        for arg in args:
-            if isinstance(arg, (tuple, list)):
-                Device.__add_args(cmdlist, arg)
-            else:
-                cmdlist.append(str(arg))        
-        
     def adb(self, *args):
         """
         Return a command list for passing and adb invocation
@@ -100,10 +171,27 @@ class Device:
         if self.serial is not None:
             cmdlist.append('-s')
             cmdlist.append(self.serial)
-        self.__add_args(cmdlist, args)
+
+        def append_args(args):
+            for arg in args:
+                if isinstance(arg, (tuple, list)):
+                    append_args(arg)
+                else:
+                    cmdlist.append(str(arg))        
+        
+        append_args(args)
         return cmdlist
-                
+
+    def state(self):
+        cmd = self.adb("get-state")
+        return sp.check_output(cmd, universal_newlines=True).rstrip()
+
     def shell(self, *args, **kwargs):
+        cmd = self.adb('shell', '-n', args)
+        return sp.run(cmd, universal_newlines=True, **kwargs)
+        
+    
+    def shell_output(self, *args, **kwargs):
         """
         Execute an adb shell command.
 
@@ -112,11 +200,27 @@ class Device:
         shell command is returned.
         """
 
-        cmd = self.adb('shell', args)
+        cmd = self.adb('shell', '-n', args)
         return sp.check_output(cmd, universal_newlines=True, **kwargs)
 
+    def push(self, local_paths, remote_path, sync=False, **run_args):
+        """
+        Push local files to the remote path.
+
+        'local_paths' can be either a str/bytes or an iterable of such.
+        'remote_path' must be a str/bytes object
+        """
+        try:
+            if os.path.exists(local_paths):
+                local_paths = [local_paths]
+        except:
+            pass
+        finally:
+            Local = [str(name) for name in local_paths]
+        return sp.run(self.adb('push', Local, remote_path), **run_args)
+        
     
-    def dalvikvm(self, cls, *dexen):
+    def dalvikvm(self, cls, *dexen, **run_kwargs):
         """\
         Run a class in dalvikvm, using local .dex files as classpath.
 
@@ -137,7 +241,7 @@ class Device:
         dex_names = [str(dex.name) for dex in dex_local]
 
         # Create temp path
-        tmp_path = self.shell('mktemp',
+        tmp_path = self.shell_output('mktemp',
                               '-p','/data/local/tmp',
                               '-d', 'credex.XXXXXX').strip()
 
@@ -145,11 +249,10 @@ class Device:
                              for dex in dex_names)
 
         # Push local .dex files to the temp directory created
-        sp.run(self.adb('push', [str(dex) for dex in dex_local], tmp_path))
+        self.push(dex_local, tmp_path)
 
         # Execute dalvikvm on the temp directory
-        rcmd = sp.run(self.adb('shell', 'dalvikvm', '-cp', classpath, cls),
-                      stdout=sp.PIPE, stderr=sp.PIPE)
+        rcmd = self.shell('dalvikvm', '-cp', classpath, cls, **run_kwargs)
 
         # Clean up temp path
         self.shell('rm', '-r', tmp_path)
@@ -157,111 +260,173 @@ class Device:
         # Return the result object of the dalvikvm execution
         return rcmd
 
-
-
     
-class Emulator(Device):
-    """
-    An Android emulator device.
 
-    Instances of this class encapsulate an Android emulator AVD and 
-    methods to execute it (in an android emulator).
+class EmulatorConsole:
+    def __init__(self, port=None):
+        self.avd = None
+        self.port = port
+        self.__auth = False
+        self.tn = telnetlib.Telnet()
+        if port is not None:
+            self.open()
 
-    Instances can be running or stopped; this is controlled
-    in several ways:
-    1) A (Python) context manager api: thus,
-    ```
-    with emu:
-       ... do stuff
-    ```
-    ensures that 'stuff' is done with a running context manager,
-    but exiting for any reason will stop it
+    def open(self, port=None):
+        if self.avd is not None:
+            raise RuntimeError("The session is already open!")
+        if port is None:
+            port = self.port
+        if port is None:
+            raise ValueError("No port has been specified")
+        self.tn.close()
+        self.tn.open('localhost', port)
+        self.port = port
 
-    The context manager api is recursive, so that nested contexts
-    can be supported.
+        self.tn.read_until(b"OK\r\n")
+        self.avd = self.check_cmd('avd name')
+        self.__auth = False
+        return self.avd
 
-    2) Methods start() and stop() allow running and stopping
-    outside a context. By default, start() registers an atexit
-    handler, so that quitting the process will also quit the 
-    emulator.
-    """
-    
-    def __init__(self, avd, port=None, sdk = None):
-        self.avd = avd
-        self.port = None
-        serial = None if port is None else ("emulator-%d" % int(port))
-        super().__init__(serial, sdk)
-        
-        self.out = ""
-        # Private: execution thread 
-        self.__thread = None
-        self.__ctxc = 0
-
-    def __enter__(self):
-        if self.__ctxc==0:
-            self.__start()
-        self.__ctxc += 1
-
-    def __exit__(self,exc_type,exc_value,tb):
-        self.__ctxc -= 1
-        if self.__ctxc==0:
-            self.__stop()            
-        
-    def start(self, at_exit_stop=True):
-        """Context manager entry."""
-        #if at_exit_stop:
-        #    atexit.register(self.stop)
-        return self.__enter__()
-
-    def stop(self):
-        """Context manager exit"""
-        print("Stopping")
-        #atexit.unregister(self.stop)
-        return self.__exit__(None,None,None)
+    def close(self):
+        self.tn.close()
+        self.avd = None
 
     def __del__(self):
-        self.__stop()
+        self.close()
+
+    ROK = re.compile(b"OK\r\n")
+    RKO = re.compile(b"KO:.*\r\n")
+    EXPECT_LIST = [ROK,RKO]
+                
+    def cmd(self, *args):
+        # Create and send command
+        def flatten_args(args):
+            for arg in args:
+                if isinstance(arg, (list,tuple)):
+                    yield from flatten_args(arg)
+                else:
+                    yield (arg if isinstance(arg,bytes)
+                             else bytes(str(arg),encoding='ascii'))
+
+        cmd = b" ".join(flatten_args(args))
+        self.tn.write(cmd)
+        self.tn.write(b"\r\n")
+
+        # Get output. Each response ends with either a line
+        # OK\r\n
+        #  or a line
+        # KO:<error>\r\n
+
+        rspno, rspmatch, rspdata = self.tn.expect(self.EXPECT_LIST)
+
+        # Decode output
+        # Return a pair, where 1st item is None or <error>
+        # and 2nd item is the response text (maybe empty)
+
+        resplines = rspdata[:rspmatch.start()].\
+                    rstrip(b"\r\n").decode('utf-8')
+
+        if rspno==0:
+            resperr = None
+        else:
+            resperr = rspdata[rspmatch.start()+3:-2].decode('utf-8')
+        
+        return (resperr, resplines)
+
+    def check_cmd(self, *args):
+        rerr, rlines = self.cmd(*args)
+        if rerr:
+            raise RuntimeError(rerr,rlines)
+        return rlines
+
+    __call__ = check_cmd
     
-    def __start(self):
-        """Start the emulator if it is not running"""
-        if self.__thread is None:
-            self.__thread = threading.Thread(target=self.__run)
-            self.__thread.start()
-            sp.check_call(self.adb('wait-for-device'))
+    def auth(self):
+        # Get the authentication token
+        auth_token_file = os.path.join(os.getenv("HOME"),
+                                       ".emulator_console_auth_token")
+        with open(auth_token_file) as f:
+            auth_token = f.readline()
+        
+        # Start by authenticating
+        retval =  self.check_cmd("auth",auth_token)
+        self.__auth = True
+        return retval
 
-    def __stop(self):
-        """Stop the emulator if it is running"""
-        if self.__thread is not None:
-            sp.check_call(self.adb('emu', 'kill'))
-            self.__thread.join()
-            self.out += self.__thread.runner.stdout
-            self.__thread = None
-        return self.out
+    def kill(self):
+        if not self.__auth: self.auth()
+        return self.check_cmd("kill")
+    def ping(self):
+        return self.check_cmd("ping")
 
+    
 
-    def __run(self):
-        """\
-        Private: this is called in a separate thread to execute 
-        the emulator """
-        cmd = [self.sdk.cmd(*EMULATOR),
-               '-avd', self.avd,
-               '-no-audio', '-no-window','-no-boot-anim']
-        threading.current_thread().runner =  sp.run(cmd,
-                              universal_newlines=True,
-                              stdout=sp.PIPE,stderr=sp.STDOUT)    
+class Emulator(Device):
+    def __init__(self, port, sdk=SDK):
+        self.port = port
+        # Check to see if the port is a legal emulator
+        # console port
+
+        with closing(EmulatorConsole(port)) as con:
+            # throw on failure, which may mean that
+            # the current user is not the owner of the
+            # emulator
+            con.auth()
+            self.avd = con.avd
             
-    def __bool__(self):
-        """Return true if the emulator is running"""
-        return self.__thread is not None
+        serial = ("emulator-%d" % int(port))
+        super().__init__(serial, sdk)
 
-    def __repr__(self):
-        return "Emulator(%s) [%s]" % (self.avd,
-                                    "running" if self else "stopped")
+    def console(self):
+        return EmulatorConsole(self.port)
 
+    def stop(self):
+        with closing(self.console()) as con:
+            con.auth()
+            con.cmd("kill")
     
+    @classmethod
+    def start(cls, avd, port, sdk=SDK):
+        cmd = [sdk.cmd(*EMULATOR),
+               '-avd', avd, '-port', str(port),
+               '-no-audio', '-no-window','-no-boot-anim']
+        proc = sp.Popen(cmd,
+                        stdin=sp.DEVNULL,
+                        stdout=sp.DEVNULL, stderr=sp.DEVNULL)
+
+        # loop to connect, check status
+        check_flag = False
+        try_loops = 0
+        while proc.poll() is None:
+            try:
+                # Try to connect console to verify
+                with closing(EmulatorConsole(port)) as con:
+                    if con.avd!=avd:
+                        # Oops, something else is listening here!
+                        proc.send_signal(SIGTERM)
+                    else:
+                        con.auth()
+                        # If there is no error,
+                        check_flag = True
+            except:
+                pass
+
+            try_loops += 1 
+            if check_flag or try_loops>20:
+                break
+
+            # wait for next loop
+            time.sleep(0.2)
+            
+        if check_flag:
+            return Emulator(port, sdk)
+        else:
+            return None
+
+
 
 if __name__=='__main__':
-    emu = Emulator('myavd1')
+    emu = AndroidSdk().emulator('myavd1')
     print("Android SDK=", emu.sdk.root)
     
 

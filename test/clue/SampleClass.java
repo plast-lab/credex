@@ -1,9 +1,18 @@
 
 package clue.testing;
 
+import static org.junit.Assert.assertEquals;
+import org.junit.Test;
+
 public class SampleClass
 {
-	public static String greeting() {
+    
+    @Test
+    public void myFirstTest() {
+        assertEquals(2, 1 + 1);
+    }
+
+    public static String greeting() {
 		return "Hello world";
 	}
 
