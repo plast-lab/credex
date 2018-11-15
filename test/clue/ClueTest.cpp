@@ -5,6 +5,7 @@
 #include "DexLoader.h"
 #include "DexOutput.h"
 #include "JarLoader.h"
+#include "InstructionLowering.h"
 
 #include <boost/exception/diagnostic_information.hpp>
 
@@ -89,24 +90,35 @@ void ClueTest::load_config(const std::string& cfgfile)
 }
 
 
-void ClueTest::write_dexen(const std::string& out_dir)
+std::vector<std::string> ClueTest::write_dexen(const std::string& out_dir)
 {
 	ConfigFiles cfg(config, out_dir);
 	const JsonWrapper& json_cfg = cfg.get_json_config();
 
+	// Prepare code for output (ignore returned stats)
+	(void) instruction_lowering::run(m_stores);
+	
 	// Possibly build locator index
 	LocatorIndex* locator_index = nullptr;
 	if(json_cfg.get("emit_locator_strings", false)) {
 		locator_index = new LocatorIndex(make_locator_index(m_stores));
 	}
 
+	// Possibly build position mapper
 	auto pos_output = cfg.metafile(json_cfg.get("line_number_map", std::string()));
 	auto pos_output_v2 = cfg.metafile(json_cfg.get("line_number_map_v2", std::string()));
 
 	std::unique_ptr<PositionMapper> pos_mapper(PositionMapper::make(pos_output, pos_output_v2));
 
+	std::vector<std::string> generated_dexen;
+	
+	// Loop over the stores
 	for(auto& store : stores() ) {
+		
+		// Loop over each store's dexen
 		for(size_t i=0; i<store.get_dexen().size(); ++i) {
+
+			// Compute a name for the dex file to be written
 			std::ostringstream ss;
 			ss << out_dir << "/" << store.get_name();
 			if(store.get_name().compare("classes")==0) {
@@ -115,8 +127,9 @@ void ClueTest::write_dexen(const std::string& out_dir)
 				ss << (i+2);
 			}
 			ss << ".dex";
-
-			auto this_dex_stats = write_classes_to_dex(
+		    
+			// ignore the stats returned by the following call
+			write_classes_to_dex(
 					ss.str(),
 					&store.get_dexen()[i],
 					locator_index,
@@ -126,9 +139,16 @@ void ClueTest::write_dexen(const std::string& out_dir)
 					nullptr,
 					nullptr
 				);
+			generated_dexen.push_back(ss.str());
 		}
 
 	}
-	pos_mapper->write_map();
+
+	// There seems to be a bug in this code, re. constructors!
+	// Since it is not necessary for our purposes, we comment it out!
+	//pos_mapper->write_map();
+
+	return generated_dexen;
 }
+
 

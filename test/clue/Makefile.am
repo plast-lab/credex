@@ -1,5 +1,5 @@
 
-AM_CXXFLAGS= --std=gnu++14
+AM_CXXFLAGS= -g3 -O3 --std=gnu++14 -Wall
 
 #
 # Include paths for tests
@@ -67,7 +67,7 @@ sample_test_LDADD = $(TEST_LIBS) \
 
 EXTRA_sample_test_DEPENDENCIES = sample-classes.dex
 
-sample-classes.jar: SampleClass.java
+sample-classes.jar: testing/SampleClass.java
 	mkdir -p sample-classes
 	$(JAVAC) $(JAVACFLAGS) -cp $(CLASSPATH) -d sample-classes $^
 	jar cf $@ -C sample-classes .

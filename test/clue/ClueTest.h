@@ -65,10 +65,23 @@ public:
 
 
   /**
-    @brief Write the set of stores loaded and processed by this pass into files
+    @brief Generate .dex files from the stores.
 
+    Generate a set of .dex files corresponding to the current 
+    contents of the ReDex context, i.e., reflecting the result
+    of whatever passes or other transformations have occurred.
+
+    The code is very similar to the code executed by credex-all at the
+    end of a run (essentially, only some statistics reporting is omitted).
+
+    The given argument designates the path name to a directory where the
+    generated files will be created. Note that it must not be the empty
+    string!
+
+    @param out_dir a path name where the files will be stored.
+    @return A vector of strings containing the file names of the generated files
     */
-  void write_dexen(const std::string& out_dir);
+  std::vector<std::string> write_dexen(const std::string& out_dir);
 
 
   /**
@@ -128,6 +141,9 @@ private:
   /// Vector of external classes
   Scope m_external_classes;
 };
+
+
+
 
 
 /**

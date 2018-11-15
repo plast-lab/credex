@@ -3,7 +3,7 @@ AUTOMAKE_OPTIONS = foreign
 SUBDIRS = . test
 
 ACLOCAL_AMFLAGS = -I m4
-AM_CXXFLAGS = --std=gnu++14 -O3 -Wall -g
+AM_CXXFLAGS = --std=gnu++14 -O3 -Wall -g3
 
 # comment right before redex_srcdir
 redex_srcdir= $(srcdir)/redex
