@@ -1,7 +1,5 @@
 
-AM_CXXFLAGS = --std=gnu++14
-
-redex_srcdir=$(top_srcdir)/redex
+AM_CXXFLAGS= --std=gnu++14
 
 #
 # Include paths for tests
@@ -21,7 +19,8 @@ libcluetesting_la_SOURCES= ClueTest.cpp
 #
 TEST_EXTENSIONS= .py
 PY_LOG_COMPILER= $(PYTHON)
-AM_TESTS_ENVIRONMENT= PYTHONPATH='$(top_srcdir)/test'; export PYTHONPATH;
+AM_TESTS_ENVIRONMENT= PYTHONPATH='$(top_srcdir)/test'; export PYTHONPATH; 
+AM_TESTS_ENVIRONMENT+= PYTHON=$(PYTHON); export PYTHON; ANDROID_SDK_ROOT=$(ANDROID_SDK_ROOT); export ANDROID_SDK_ROOT;
 #AM_PY_LOG_FLAGS= -v
 
 
@@ -51,8 +50,21 @@ junit.dex: $(wildcard $(top_builddir)/test/java/*.jar)
 #  sample_test definitions
 #
 
-sample_test_SOURCES = SampleTest.cpp
-sample_test_LDADD = $(TEST_LIBS) -ldl
+include ../../RedexObj.am.inc
+
+sample_test_SOURCES = SampleTest.cpp $(REDEX_ALL_SRC)
+
+
+sample_test_LDADD = $(TEST_LIBS) \
+	$(top_srcdir)/libredex.la \
+	$(BOOST_FILESYSTEM_LIB) \
+	$(BOOST_SYSTEM_LIB) \
+	$(BOOST_REGEX_LIB) \
+	$(BOOST_PROGRAM_OPTIONS_LIB) \
+	$(BOOST_THREAD_LIB) \
+	-lpthread \
+	-ldl
+
 EXTRA_sample_test_DEPENDENCIES = sample-classes.dex
 
 sample-classes.jar: SampleClass.java

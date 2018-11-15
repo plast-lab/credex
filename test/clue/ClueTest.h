@@ -63,6 +63,14 @@ public:
     */
   void load_jar(const std::string& jarfile);
 
+
+  /**
+    @brief Write the set of stores loaded and processed by this pass into files
+
+    */
+  void write_dexen(const std::string& out_dir);
+
+
   /**
     @brief Set the config field to JSON from parsing a string
 

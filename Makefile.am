@@ -17,11 +17,12 @@ include Libredex.am.inc
 
 noinst_PROGRAMS = credex-all
 
-include RedexObj.am.in
+include RedexObj.am.inc
 
 
 credex_all_SOURCES = \
 	$(REDEX_ALL_SRC) \
+	$(top_srcdir)/redex/tools/redex-all/main.cpp \
 	passes/remover/Remover.cpp \
 	passes/plast-devirt/PlastDevirtualizationPass.cpp \
 	passes/plast-devirt/PlastDVParser.cpp

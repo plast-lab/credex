@@ -8,7 +8,12 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <gtest/gtest.h>
+
+#include <boost/filesystem.hpp>
+#include <boost/process.hpp>
+#include <boost/process/environment.hpp>
 
 #include "ClueTest.h"
 
@@ -25,6 +30,20 @@ TEST(SampleTests, sample1) {
   // This test is a self-contained routine, that does nothing
   ASSERT_EQ(1,1);
 
+  // We print the environment here
+  namespace bp = boost::process;
+
+  if(const char* val = std::getenv("PYTHON"))
+    std::cout << "PYTHON=" << val << std::endl;
+  else
+    std::cout << "No PYTHON defined" << std::endl;
+  if(const char* val = std::getenv("ANDROID_SDK_ROOT") )
+    std::cout << "ANDROID_SDK_ROOT=" << val << std::endl;
+  else
+    std::cout << "No ANDROID_SDK_ROOT defined" << std::endl;
+
+  int result = bp::system(std::getenv("PYTHON"),"-m","androidctl","avds");
+  ASSERT_EQ(0, result);  
 }
 
 
@@ -149,6 +168,7 @@ TEST_F(ClueTest, sample3) {
   // Note that the param has taken the value provided at the last activation,
   // i.e., that corresponding to "SamplePass#2"
   EXPECT_EQ("baz", sample_pass->param);
+
 }
 
 
@@ -171,3 +191,46 @@ TEST_F(ClueTest, sample4) {
   EXPECT_EQ(2, sample_pass->run_calls);
   EXPECT_EQ("baz", sample_pass->param);
 }
+
+
+
+
+//----------------------
+// A test with all passes. 
+//------------------------
+TEST_F(ClueTest, sample5) {
+
+  using std::cout;
+  using std::endl;
+
+  // Load the sample-classes.dex file by calling ClueTest::load_dex()
+  load_dex("sample-classes.dex");
+
+  auto sample_pass = new SamplePass();
+  //std::vector<Pass*> passes { sample_pass };
+  std::vector<Pass*> passes ; 
+  for(auto& pass : PassRegistry::get().get_passes())
+  	passes.push_back(pass);
+
+  //
+  // Use a reasonable config
+  //
+  load_config("reasonable.config");
+
+
+  std::cerr << config << std::endl;
+
+  run_passes(passes);
+
+  // EXPECT_EQ(0, sample_pass->configure_calls);
+  // EXPECT_EQ(0, sample_pass->eval_calls);
+  // EXPECT_EQ(0, sample_pass->run_calls);
+  // EXPECT_EQ("", sample_pass->param);
+
+  auto tmp_path = boost::filesystem::temp_directory_path()/boost::filesystem::unique_path("credex-test-%%%%-%%%%");
+  ASSERT_TRUE(create_directory(tmp_path));
+
+  cout << "Created unique directory: " << tmp_path << endl;
+  write_dexen(tmp_path.native());
+}
+

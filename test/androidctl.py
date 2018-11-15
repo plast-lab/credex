@@ -5,15 +5,17 @@
 # tests on android devices (real or emulated).
 #
 
-import os, io
+import os, io, sys
 import atexit
 import telnetlib
 import re
 import time
 import subprocess as sp
+import traceback as tb
 from pathlib import Path, PurePosixPath
 from contextlib import closing
 from signal import SIGTERM
+from optparse import OptionParser
 
 EMULATOR = ('emulator','emulator')
 ADB = ('platform-tools','adb')
@@ -79,19 +81,8 @@ class AndroidSdk:
             return None
 
         return Emulator.start(avd, port, self)
-        
-    def emulator(self, avd=None):
-        """Return an Emulator object for a given avd"""
 
-        if avd is None:
-            avds = self.get_avds()
-            if len(avds)==0:
-                raise ValueError("There are no AVDs defined")
-            else:
-                avd = avds[0]
-        if avd not in self.get_avds():
-            raise ValueError("Cannot find AVD "+str(avd))
-        
+    def scan_emulators(self, avd=None):
         # Try to find an emulator for given avd
         # by scanning the 64 even ports starting from
         # 5554
@@ -99,17 +90,36 @@ class AndroidSdk:
             try:
                 with closing(EmulatorConsole(port)) as con:
                     con.auth()
-                    if con.avd==avd:
+                    if avd is None or con.avd==avd:
                         return Emulator(port)
             except:
                 pass
+        return None
+
+        
+    def emulator(self, avd=None):
+        """Return an Emulator object for a given avd"""
+        all_avds = self.get_avds()
+
+        if len(all_avds)==0:
+            raise ValueError("There are no AVDs defined")
+
+        if avd is not None and avd not in all_avds:
+            raise ValueError("AVD named "+str(avd)+" does not exist")
+        
+        emu = self.scan_emulators(avd)
+        if emu is not None:
+            return emu
+
+        if avd is None:
+            avd = all_avds[0]
 
         for port in range(5554,5554+128,2):
             emu = self.__new_emulator_at_port(avd, port)
             if emu is not None:
                 return emu
 
-        return None
+        raise RuntimeError("Could not start AVD",avd)
         
         
     def get_avds(self):
@@ -266,7 +276,13 @@ class Device:
         # Return the result object of the dalvikvm execution
         return rcmd
 
-    
+    def wait_for(self, state, transport='any', **run_kwargs):
+        if state not in ('device','recovery', 'sideload', 'bootloader'):
+            raise ValueError("Unknown device state",state)
+        if transport not in ('any','local','usb'):
+            raise ValueError("Unknown device transport",transport)
+        return sp.run(self.adb('wait-for-%s-%s' %(transport,state)), **run_kwargs)
+
 
 class EmulatorConsole:
     def __init__(self, port=None):
@@ -429,11 +445,147 @@ class Emulator(Device):
         else:
             return None
 
+def ensure(val, *err_msg):
+    if not val:
+        raise ValueError(*err_msg)
+
+def cmd_list_avds(options, args):
+    ensure(len(args)==1, "Arguments after command")
+    ensure(options.avd is None, "An AVD was specified!")
+    ensure(options.serial is None, "A device was specified!")
+    ensure(not options.dexen, "DEX files were specified!")
+
+    for avd in get_avds():
+        print(avd)
+    return 0    
+
+def cmd_devices(options, args):
+    ensure(len(args)==1, "Arguments after command")
+    ensure(options.avd is None, "An AVD was specified!")
+    ensure(not options.dexen, "DEX files were specified!")
+
+    if options.serial is None:
+        for d in devices():
+            print(d[0])
+    else:
+        print(device(options.serial))
+
+    return 0 
+
+
+def cmd_start(options, args):
+    ensure(options.serial is None, "A device was specified!")
+    ensure(not options.dexen, "DEX files were specified!")
+    ensure(len(args)==1, "Arguments after command")
+
+    avd = None if options.avd is None else options.avd
+    emu = emulator(avd)
+    emu.wait_for('device', timeout=10)
+    print(emu.avd)
+
+    return 0
+
+def cmd_stop(options, args):
+    ensure(len(args)==1, "Arguments after command")
+    ensure(not options.dexen, "DEX files were specified!")
+
+    if options.serial is not None:
+        emu = device(options.serial)
+    else:
+        emu = SDK.scan_emulators(options.avd)
+
+    ensure(emu is not None, "There is no running emulator to stop")
+    emu.console().kill()
+
+    return 0
+
+def do_run(jclass, jargs, dexes, options, args):
+    ensure(options.avd is None or options.serial is None or options.avd==device(options.serial).avd,
+        "The serial and the avd specificed do not match")
+
+    from fnmatch import fnmatch
+    def collect(dex):
+        if os.path.isdir(dex):
+            for fdex in os.listdir(dex):
+                if fnmatch(fdex, "*.dex"):
+                    dexes.append(os.path.join(dex, fdex))
+        elif os.path.isfile(dex):
+            dexes.append(dex)
+
+    for dex in options.dexen:
+        collect(dex)
+
+    dev = device(options.serial) if options.serial else emulator(options.avd)
+    if options.verbose:
+        print("Execution on device ",dev.serial)
+    dev.wait_for('device', timeout=8)
+    if options.verbose:
+        print("dalvikvm ",jclass,*jargs,"  --classpath:",dexes)
+    dev.dalvikvm([jclass]+jargs, *dexes)
+
+    return 0
+
+def cmd_run(options, args):
+    ensure(len(args)>=2,"No class to run is specified")
+    dexes = []
+    return do_run(args[1], args[2:], dexes, options, args)
+
+def cmd_test(options, args):
+    dexes = ["./clue/junit.dex"]
+    test_classes = args[1:]
+    return do_run("org.junit.runner.JUnitCore", test_classes, dexes, options, args)
+
+    
+
+def main(argv):
+    op = OptionParser(usage="usage: %prog [options] command ...", version="%prog 1.0")
+    op.add_option("-a","--avd",dest="avd", default=None, help="Specify the AVD to use")
+    op.add_option("-v","--verbose", action="store_true", default=False, help="Trace the execution steps")
+    op.add_option("-s","--serial", dest="serial", default=None, help="Specify the device to use")
+    op.add_option("-d","--dex",dest="dexen", action="append", default=list(), 
+        help="load .dex file (or directory)")
+
+    options, args = op.parse_args()
+
+    CMD = {
+        'test': cmd_test,
+        'run': cmd_run,
+        'avds': cmd_list_avds,
+        'device': cmd_devices,
+        'start': cmd_start,
+        'stop': cmd_stop
+    }
+
+    if len(args)==0 or args[0] not in CMD:
+        op.error("""\
+Bad command.
+Commands:
+    test  <test-class>...
+    run <main-class> [args]
+    avds
+    devices
+    start
+    stop
+""")
+    else:
+        try:
+            if options.verbose:
+                print("options=",options)
+                print("args=",args)
+            return CMD[args[0]](options, args)
+        except ValueError as err:
+            print("Error:")
+            print(*err.args)
+            return 2
+        except:
+            print("An error occurred:")
+            tb.print_exc()
+            return 1
 
 
 if __name__=='__main__':
-    emu = AndroidSdk().emulator('myavd1')
-    print("Android SDK=", emu.sdk.root)
+    sys.exit(main(sys.argv[1:]))
+
     
 
     
