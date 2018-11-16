@@ -4,6 +4,7 @@
 AC_PREREQ([2.69])
 AC_INIT([credex], [0.1.0], [yannis@di.uoa.gr])
 
+AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
 LT_INIT

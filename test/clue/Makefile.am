@@ -4,15 +4,20 @@ AM_CXXFLAGS= -g3 -O3 --std=gnu++14 -Wall
 #
 # Include paths for tests
 #
-include ../../Incpath.am.inc
+#include ../../Incpath.am.inc
 
+AM_CPPFLAGS = -I@top_srcdir@/includes -I/usr/include/jsoncpp
 AM_CPPFLAGS += -I@top_srcdir@/test/googletest-release-1.7.0/include 
 
 
 # Rules for making the cluetesing library
-noinst_LTLIBRARIES = libcluetesting.la
-
+check_LTLIBRARIES = libcluetesting.la
 libcluetesting_la_SOURCES= ClueTest.cpp
+libcluetesting_la_LIBADD= \
+	$(BOOST_FILESYSTEM_LIB) \
+	$(BOOST_SYSTEM_LIB) \
+	$(BOOST_REGEX_LIB)
+
 
 #
 # Set up for dalvik tests
@@ -33,7 +38,9 @@ VERBOSE=1
 #
 # Libraries to link with the tests
 #
-TEST_LIBS = libcluetesting.la @top_builddir@/test/libgtest_main.la \
+TEST_LIBS = \
+  libcluetesting.la \
+  @top_builddir@/test/libgtest_main.la \
   @top_builddir@/libredex.la
 
 
@@ -50,22 +57,19 @@ junit.dex: $(wildcard @top_srcdir@/test/java/*.jar)
 #  sample_test definitions
 #
 
-include ../../RedexObj.am.inc
+# include ../../RedexObj.am.inc
 
-sample_test_SOURCES = SampleTest.cpp $(REDEX_ALL_SRC)
-
+sample_test_SOURCES = SampleTest.cpp
 
 sample_test_LDADD = $(TEST_LIBS) \
-	@top_builddir@/libredex.la \
 	$(BOOST_FILESYSTEM_LIB) \
-	$(BOOST_SYSTEM_LIB) \
-	$(BOOST_REGEX_LIB) \
-	$(BOOST_PROGRAM_OPTIONS_LIB) \
-	$(BOOST_THREAD_LIB) \
-	-lpthread \
-	-ldl
+	$(BOOST_SYSTEM_LIB)
 
-EXTRA_sample_test_DEPENDENCIES = sample-classes.dex
+sample_test_LDFLAGS=\
+ -Wl,--whole-archive,--library-path=@top_builddir@/.libs,-lcredex,--no-whole-archive \
+ -rdynamic
+
+EXTRA_sample_test_DEPENDENCIES = sample-classes.dex @top_builddir@/libcredex.la
 
 sample-classes.jar: testing/SampleClass.java
 	mkdir -p sample-classes

@@ -1,9 +1,9 @@
 #
 # libredex: the optimizer's guts
 #
-noinst_LTLIBRARIES = libredex.la
 
 libredex_la_SOURCES = \
+	@top_srcdir@/redex/libredex/DexAsm.cpp \
 	@top_srcdir@/redex/liblocator/locator.cpp \
 	@top_srcdir@/redex/libredex/AnnoUtils.cpp \
 	@top_srcdir@/redex/libredex/ApkManager.cpp \
@@ -89,11 +89,4 @@ libredex_la_SOURCES = \
 	@top_srcdir@/redex/util/JemallocUtil.cpp \
 	@top_srcdir@/redex/util/Sha1.cpp
 
-libredex_la_LIBADD = \
-	$(BOOST_FILESYSTEM_LIB) \
-	$(BOOST_SYSTEM_LIB) \
-	$(BOOST_REGEX_LIB) \
-	$(BOOST_IOSTREAMS_LIB) \
-	$(BOOST_THREAD_LIB) \
-	-lpthread
 

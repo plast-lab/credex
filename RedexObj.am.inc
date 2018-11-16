@@ -1,5 +1,5 @@
-REDEX_ALL_SRC = \
-	@top_srcdir@/redex/libredex/DexAsm.cpp \
+
+libredex_opt_la_SOURCES= \
 	@top_srcdir@/redex/opt/access-marking/AccessMarking.cpp \
 	@top_srcdir@/redex/opt/add_redex_txt_to_apk/AddRedexTxtToApk.cpp \
 	@top_srcdir@/redex/opt/analysis_ref_graph/ReferenceGraphCreator.cpp \
@@ -104,4 +104,5 @@ REDEX_ALL_SRC = \
 	@top_srcdir@/redex/service/reference-update/TypeReference.cpp \
 	@top_srcdir@/redex/service/switch-dispatch/SwitchDispatch.cpp \
 	@top_srcdir@/redex/tools/common/ToolsCommon.cpp
+
 
