@@ -6,7 +6,7 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CXXFLAGS = --std=gnu++14 -O3 -Wall -g3
 
 # comment right before redex_srcdir
-redex_srcdir= $(srcdir)/redex
+redex_srcdir= @srcdir@/redex
 
 #
 # Include paths
@@ -22,7 +22,7 @@ include RedexObj.am.inc
 
 credex_all_SOURCES = \
 	$(REDEX_ALL_SRC) \
-	$(top_srcdir)/redex/tools/redex-all/main.cpp \
+	@top_srcdir@/redex/tools/redex-all/main.cpp \
 	passes/remover/Remover.cpp \
 	passes/plast-devirt/PlastDevirtualizationPass.cpp \
 	passes/plast-devirt/PlastDVParser.cpp
