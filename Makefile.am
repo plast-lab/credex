@@ -8,14 +8,40 @@ AM_CXXFLAGS = --std=gnu++14 -O3 -Wall -g3
 # comment right before redex_srcdir
 redex_srcdir= @srcdir@/redex
 
-#
+#------------------------------------------------------------
 # Include paths
 #
-#include Incpath.am.inc
+# Path ./includes is a directory with symlinks to all header files
+# (and some directories). This way, we avoid having extremely long
+# sequences of -I options to the compiler.
+#
+# The ./includes directory is built automatically by ./configure.
+# It can be rebuilt (without a full configuration) by running
+#
+#   ./config.status generate_includes
+#
+#------------------------------------------------------------
 
 AM_CPPFLAGS= -I@top_srcdir@/includes -I/usr/include/jsoncpp
 
+#
+#  Build artifacts:
+#  libredex.a   Contains code that is linked as a library.
+#  libcredex.a  Contains code that is linked with --whole-archive passed
+#               to the linker. This is because redex passes are registered
+#               inside the constructors of unreferenced global objects
+#               (an unfortunate decision IMHO) so that a library-style link
+#               would not include the passes in the build.
+#
+#               In fact, this file is made by concatenating two other files,
+#               libcredex_passes.a and libredex_opt.a 
+#
+
 noinst_LTLIBRARIES= libredex.la libredex_opt.la libcredex_passes.la libcredex.la
+
+# 
+# libredex.a   
+#
 
 include Libredex.am.inc
 
@@ -28,6 +54,10 @@ libredex_la_LIBADD = \
 	-lpthread \
 	-ldl
 
+#
+# libcredex.a
+#
+
 include RedexObj.am.inc
 
 libcredex_passes_la_SOURCES=\
@@ -35,15 +65,21 @@ libcredex_passes_la_SOURCES=\
 	passes/plast-devirt/PlastDevirtualizationPass.cpp \
 	passes/plast-devirt/PlastDVParser.cpp
 
-# The following is a trick to force C++ linking, but it is not
-# really needed, since libcredex is added manually!!!
-# nodist_EXTRA_libcredex_la_SOURCES= dummy.cpp
+
 
 libcredex_la_SOURCES=
 libcredex_la_LIBADD=\
 	libredex_opt.la \
 	libcredex_passes.la
 
+#---------------------------------
+# Build targets
+#---------------------------------
+
+#
+# credex-all   is not really installable, since it is wrapped inside
+#              the 'credex' self-extracting file
+#
 
 noinst_PROGRAMS = credex-all
 
@@ -52,15 +88,6 @@ credex_all_SOURCES = \
 
 EXTRA_credex_all_DEPENDENCIES= libcredex.la
 
-#credex_all_LDADD = \
-#	libredex.la \
-#	$(BOOST_FILESYSTEM_LIB) \
-#	$(BOOST_SYSTEM_LIB) \
-#	$(BOOST_REGEX_LIB) \
-#	$(BOOST_PROGRAM_OPTIONS_LIB) \
-#	$(BOOST_THREAD_LIB) \
-#	-lpthread \
-#	-ldl
 
 credex_all_LDADD = \
 	libredex.la \
@@ -69,11 +96,6 @@ credex_all_LDADD = \
 credex_all_LDFLAGS = \
 	-Wl,--whole-archive,--library-path=.libs,-lcredex,--no-whole-archive\
 	-rdynamic # function names in stack traces
-
-#credex_all_LDFLAGS = \
-#	-Wl,--whole-archive,--library-path=.libs,-lredex_opt,--no-whole-archive\
-#	-Wl,--whole-archive,--library-path=.libs,-lcredex_passes,--no-whole-archive\
-#	-rdynamic # function names in stack traces
 
 
 #
