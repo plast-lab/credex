@@ -19,6 +19,10 @@ from optparse import OptionParser
 
 EMULATOR = ('emulator','emulator')
 ADB = ('platform-tools','adb')
+AVDMAN = ('tools','bin','avdmanager')
+SDKMAN = ('tools','bin','sdkmanager')
+
+credex_test_path = os.path.dirname(__file__)
 
 class AndroidSdk:
     """A wrapper to an installed SDK"""
@@ -198,16 +202,25 @@ class Device:
         append_args(args)
         return cmdlist
 
-    def state(self):
-        cmd = self.adb("get-state")
-        return sp.check_output(cmd, universal_newlines=True).rstrip()
+    def state(self, **run_kwargs):
+        """
+        Return a string describing the current state of the device.
+        If the device does not exist, return None
+        """
+        try:
+            cmd = self.adb("get-state")
+            return sp.check_output(cmd,
+                                   universal_newlines=True,
+                                   **run_kwargs).rstrip()
+        except sp.CalledProcessError:
+            return None
 
-    def shell(self, *args, **kwargs):
+    def shell(self, *args, **run_kwargs):
         cmd = self.adb('shell', '-n', args)
-        return sp.run(cmd, universal_newlines=True, **kwargs)
+        return sp.run(cmd, universal_newlines=True, **run_kwargs)
         
     
-    def shell_output(self, *args, **kwargs):
+    def shell_output(self, *args, **run_kwargs):
         """
         Execute an adb shell command.
 
@@ -217,7 +230,7 @@ class Device:
         """
 
         cmd = self.adb('shell', '-n', args)
-        return sp.check_output(cmd, universal_newlines=True, **kwargs)
+        return sp.check_output(cmd, universal_newlines=True, **run_kwargs)
 
     def push(self, local_paths, remote_path, sync=False, **run_args):
         """
@@ -465,10 +478,12 @@ def cmd_devices(options, args):
     ensure(not options.dexen, "DEX files were specified!")
 
     if options.serial is None:
-        for d in devices():
+        for d in devices():            
             print(d[0])
     else:
-        print(device(options.serial))
+        d = device(options.serial)
+        if d.state(stderr=sp.STDOUT) is not None:
+            print(d.serial)
 
     return 0 
 
@@ -480,6 +495,8 @@ def cmd_start(options, args):
 
     avd = None if options.avd is None else options.avd
     emu = emulator(avd)
+    if options.verbose:
+        print("Waiting for",emu.avd,"as",emu.serial)
     emu.wait_for('device', timeout=10)
     print(emu.avd)
 
@@ -531,7 +548,8 @@ def cmd_run(options, args):
     return do_run(args[1], args[2:], dexes, options, args)
 
 def cmd_test(options, args):
-    dexes = ["./clue/junit.dex"]
+    # Locate the junit.dex file in the directory of androidctl.py    
+    dexes = [os.path.join(credex_test_path, "junit.dex")]
     test_classes = args[1:]
     return do_run("org.junit.runner.JUnitCore", test_classes, dexes, options, args)
 
@@ -551,7 +569,7 @@ def main(argv):
         'test': cmd_test,
         'run': cmd_run,
         'avds': cmd_list_avds,
-        'device': cmd_devices,
+        'devices': cmd_devices,
         'start': cmd_start,
         'stop': cmd_stop
     }

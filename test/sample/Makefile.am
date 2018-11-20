@@ -8,15 +8,8 @@ AM_CXXFLAGS= -g3 -O3 --std=gnu++14 -Wall
 
 AM_CPPFLAGS = -I@top_srcdir@/includes -I/usr/include/jsoncpp
 AM_CPPFLAGS += -I@top_srcdir@/test/googletest-release-1.7.0/include 
+AM_CPPFLAGS += -I@top_srcdir@/test/clue
 
-
-# Rules for making the cluetesing library
-check_LTLIBRARIES = libcluetesting.la
-libcluetesting_la_SOURCES= ClueTest.cpp
-libcluetesting_la_LIBADD= \
-	$(BOOST_FILESYSTEM_LIB) \
-	$(BOOST_SYSTEM_LIB) \
-	$(BOOST_REGEX_LIB)
 
 
 #
@@ -39,7 +32,7 @@ VERBOSE=1
 # Libraries to link with the tests
 #
 TEST_LIBS = \
-  libcluetesting.la \
+  @top_builddir@/test/libcluetesting.la \
   @top_builddir@/test/libgtest_main.la \
   @top_builddir@/libredex.la
 
@@ -50,14 +43,9 @@ TEST_LIBS = \
 
 CLASSPATH=$(subst $() $(),:,$(wildcard @top_srcdir@/test/java/*.jar))
 
-junit.dex: $(wildcard @top_srcdir@/test/java/*.jar)
-	$(DX) --dex --output $@ $^
-
 #
 #  sample_test definitions
 #
-
-# include ../../RedexObj.am.inc
 
 sample_test_SOURCES = SampleTest.cpp
 
@@ -83,7 +71,7 @@ sample-classes.dex: sample-classes.jar
 	$(DX) --dex --output=$@ $^
 
 
-sample_dalvik_test.py: sample-classes.dex junit.dex
+sample_dalvik_test.py: sample-classes.dex
 
 
 #

@@ -31,8 +31,8 @@ AM_PATH_PYTHON([3.5], [], [AC_MSG_ERROR([CRedex requires python 3.5 or newer])])
 
 # Checks for libraries.
 AX_PTHREAD
-AX_BOOST_BASE([1.58.0], [], [AC_MSG_ERROR(
-              [Please install boost >= 1.58 (including filesystem)])])
+AX_BOOST_BASE([1.64.0], [], [AC_MSG_ERROR(
+              [Please install boost >= 1.64 (including filesystem)])])
 AX_BOOST_FILESYSTEM
 AX_BOOST_SYSTEM
 AX_BOOST_REGEX
@@ -86,7 +86,7 @@ find redex/libresource -mindepth 1 -maxdepth 1 -type d -name "@<:@a-z@:>@*" -pri
 AC_CONFIG_FILES([
         Makefile        
         test/Makefile
-        test/clue/Makefile
+        test/sample/Makefile
 ])
 
 ### This is not enabled,  --deleted: as it would interfere with the testing code

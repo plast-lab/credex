@@ -16,6 +16,7 @@
 #include <boost/process/environment.hpp>
 
 #include "ClueTest.h"
+#include "AndroidTest.h"
 
 /**
   @fn SampleTests_sample1_Test()
@@ -204,6 +205,7 @@ TEST_F(ClueTest, sample5) {
   // Load the sample-classes.dex file by calling ClueTest::load_dex()
   load_dex("sample-classes.dex");
 
+  // Collect all registered passes
   std::vector<Pass*> passes ; 
   for(auto& pass : PassRegistry::get().get_passes())
   	passes.push_back(pass);
@@ -213,23 +215,19 @@ TEST_F(ClueTest, sample5) {
   //
   load_config("reasonable.config");
 
-
-  std::cerr << config << std::endl;
-
+  // run the passes
   run_passes(passes);
 
-  // EXPECT_EQ(0, sample_pass->configure_calls);
-  // EXPECT_EQ(0, sample_pass->eval_calls);
-  // EXPECT_EQ(0, sample_pass->run_calls);
-  // EXPECT_EQ("", sample_pass->param);
-
-  namespace bf = boost::filesystem;
-  auto tmp_path = bf::temp_directory_path()/bf::unique_path("credex-test-%%%%-%%%%");
-  ASSERT_TRUE(create_directory(tmp_path));
-
-  cout << "Created unique directory: " << tmp_path << endl;
-  write_dexen(tmp_path.native());
-
+  TempDir tmp_path;
   
+  cout << "Created unique directory: " << tmp_path.dir() << endl;
+  write_dexen(tmp_path.dir().native());
+
+
+  AndroidTest atst;
+
+  atst.dexen.push_back(tmp_path);
+
+  EXPECT_TRUE(atst("clue.testing.SampleClass"));
 }
 
