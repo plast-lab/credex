@@ -63,6 +63,9 @@ int AndroidTest::call(const std::string& cmd, const std::vector<std::string>& a)
 	std::vector<std::string> args = {
 		"-m", "androidctl"
 	};
+	if(verbose) {
+		args.push_back("-v");
+	}
 	if(! avd.empty()) {
 		args.push_back("-a");
 		args.push_back(avd);

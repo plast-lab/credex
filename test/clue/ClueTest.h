@@ -15,6 +15,7 @@
 #include "Pass.h"
 #include "ProguardConfiguration.h"
 
+#include "AndroidTest.h"
 
 /**
   @brief Test fixture class for clue-redex unit tests.
@@ -31,6 +32,9 @@ class ClueTest : public testing::Test
 {
 public:
 
+  /// Output directory if not empty!
+  TempDir outdir;
+  
   /// Json object containing configuration options for the passes
   Json::Value config;
 
@@ -74,14 +78,9 @@ public:
     The code is very similar to the code executed by credex-all at the
     end of a run (essentially, only some statistics reporting is omitted).
 
-    The given argument designates the path name to a directory where the
-    generated files will be created. Note that it must not be the empty
-    string!
-
-    @param out_dir a path name where the files will be stored.
     @return A vector of strings containing the file names of the generated files
     */
-  std::vector<std::string> write_dexen(const std::string& out_dir);
+  std::vector<std::string> write_dexen();
 
 
   /**

@@ -9,12 +9,23 @@
 
 #include <boost/exception/diagnostic_information.hpp>
 
+
+static inline bool is_yes(const char* txt) {
+  std::string value = txt;
+
+  return value=="yes" || value=="true";
+}
+
+
 ClueTest::ClueTest()
 	: config(Json::nullValue)
 {
 	g_redex = new RedexContext();
 	DexStore root("classes");
 	m_stores.emplace_back(std::move(root));
+	if(std::getenv("CLUE_TEST_KEEP")!=nullptr &&
+	   is_yes(std::getenv("CLUE_TEST_KEEP")))
+	  outdir.keep();
 }
 
 ClueTest::~ClueTest()
@@ -52,7 +63,7 @@ void ClueTest::run_passes(const std::vector<Pass*>& passes,
               const redex::ProguardConfiguration& pg_config,
               bool verify_none_mode, bool is_art_build)
 {
-	ConfigFiles cfg(config);
+	ConfigFiles cfg(config, outdir.dir().native());
 	// N.B. Here, we would call apply_deobfuscated_names when ProGuard map files are
 	// provided!
 
@@ -65,34 +76,33 @@ void ClueTest::run_passes(const std::vector<Pass*>& passes,
 	manager.run_passes(m_stores, cfg);
 }
 
+static Json::CharReaderBuilder jbuilder;
+
+inline static void parse_json(std::istream& sin, Json::Value* out)
+{
+	std::string err;
+	if(! Json::parseFromStream(jbuilder, sin, out, &err)) {
+		throw std::runtime_error(err.c_str());
+	}
+}
 
 void ClueTest::parse_config(const char* js)
 {
-  std::string jss(js);
-  Json::Reader reader;
-  reader.parse(jss, config);
-  if(! reader.good()) {
-    std::string what = "Json_parse errors: " + reader.getFormattedErrorMessages();
-    throw std::runtime_error(what.c_str());
-  }
+  std::istringstream jss(js);
+  parse_json(jss, &config);
 }
 
 void ClueTest::load_config(const std::string& cfgfile)
 {
   std::ifstream cfgin;
   cfgin.open(cfgfile.c_str(), std::ifstream::in);
-    Json::Reader reader;
-  reader.parse(cfgin, config);
-  if(! reader.good()) {
-    std::string what = "Json_parse errors: " + reader.getFormattedErrorMessages();
-    throw std::runtime_error(what.c_str());
-  }
+  parse_json(cfgin, &config);
 }
 
 
-std::vector<std::string> ClueTest::write_dexen(const std::string& out_dir)
+std::vector<std::string> ClueTest::write_dexen()
 {
-	ConfigFiles cfg(config, out_dir);
+	ConfigFiles cfg(config, outdir.dir().native());
 	const JsonWrapper& json_cfg = cfg.get_json_config();
 
 	// Prepare code for output (ignore returned stats)
@@ -120,26 +130,33 @@ std::vector<std::string> ClueTest::write_dexen(const std::string& out_dir)
 
 			// Compute a name for the dex file to be written
 			std::ostringstream ss;
-			ss << out_dir << "/" << store.get_name();
+			ss << store.get_name();
 			if(store.get_name().compare("classes")==0) {
+			  // For the root store, the .dex names are
+			  // classes, classes2, classes3, ...
 				if(i>0) ss << (i+1);
 			} else {
+			  // For other stores, say named 'n', the
+			  // .dex names are  n2, n3, ...
 				ss << (i+2);
 			}
+			// add extension
 			ss << ".dex";
-		    
+
+			fs::path dexfname = outdir.dir()/ss.str();
+			
 			// ignore the stats returned by the following call
 			write_classes_to_dex(
-					ss.str(),
-					&store.get_dexen()[i],
-					locator_index,
-					i,
-					cfg,
-					pos_mapper.get(),
-					nullptr,
-					nullptr
+				dexfname.string(),
+				&store.get_dexen()[i],
+				locator_index,
+				i,
+				cfg,
+				pos_mapper.get(),
+				nullptr,
+				nullptr
 				);
-			generated_dexen.push_back(ss.str());
+			generated_dexen.push_back(dexfname.string());
 		}
 
 	}

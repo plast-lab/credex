@@ -4,12 +4,8 @@
 */
 #pragma once
 
-
-//#include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/process.hpp>
-//#include <boost/process/environment.hpp>
-
 
 namespace fs = boost::filesystem;
 namespace proc = boost::process;
@@ -41,7 +37,9 @@ public:
 			p = create(temp, model);
 		}
 
-	inline TempDir() : TempDir(fs::path(), fs::path(default_model)) {}
+	inline TempDir()
+		: TempDir(fs::temp_directory_path(), fs::path(default_model))
+		{}
 	
 	/**
 	   @brief Create a new temporary directory.
@@ -65,16 +63,29 @@ public:
 	static fs::path create(const fs::path& temp = fs::path(),
 			       const fs::path& model = fs::path());
 
+#if 0
 	TempDir(const TempDir& o) {
 		_temp = o._temp;
 		_model = o._model;
 		p = create(_temp, _model);
 		_keep = false;
 	}
+#else
+	TempDir(const TempDir&) = delete;
+#endif
+	TempDir& operator=(const TempDir&)=delete;
 
 	TempDir(TempDir&& o) = default;
-	TempDir& operator=(const TempDir&)=delete;
-	TempDir& operator=(TempDir&& o) = default;
+
+	TempDir& operator=(TempDir&& o) {
+		if(!_keep && !p.empty()) fs::remove_all(p);
+		_temp = o._temp;
+		_model = o._model;
+		p = std::move(o.p);
+		o.p = "";
+		_keep = o._keep;
+		return *this;
+	}
 	
 	~TempDir() {
 		if(!_keep && !p.empty()) fs::remove_all(p);
@@ -105,7 +116,8 @@ public:
 	std::string avd;
 	std::string serial;
 	std::vector<fs::path> dexen;
-
+	bool verbose = true;
+	
 	fs::path get_python3() {
 		auto py = std::getenv("PYTHON");
 		if(py) return py;

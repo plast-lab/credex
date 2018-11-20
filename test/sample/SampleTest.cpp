@@ -33,9 +33,9 @@ TEST(SampleTests, sample1) {
   EXPECT_EQ(1,1);
 
   // These are all needed to be able to execute dalvik bytecode
+  EXPECT_NE(nullptr, std::getenv("ANDROID_SDK_ROOT"));
+  EXPECT_NE(nullptr, std::getenv("PYTHONPATH"));
   ASSERT_NE(nullptr, std::getenv("PYTHON"));
-  ASSERT_NE(nullptr, std::getenv("ANDROID_SDK_ROOT"));
-  ASSERT_NE(nullptr, std::getenv("PYTHONPATH"));
 
   // Check that all comes together in this line
   namespace bp = boost::process;
@@ -218,15 +218,13 @@ TEST_F(ClueTest, sample5) {
   // run the passes
   run_passes(passes);
 
-  TempDir tmp_path;
-  
-  cout << "Created unique directory: " << tmp_path.dir() << endl;
-  write_dexen(tmp_path.dir().native());
+  // Create the output
+  write_dexen();
 
-
+  // Run a test
   AndroidTest atst;
 
-  atst.dexen.push_back(tmp_path);
+  atst.dexen.push_back(outdir);
 
   EXPECT_TRUE(atst("clue.testing.SampleClass"));
 }
