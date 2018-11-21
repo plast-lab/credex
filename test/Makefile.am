@@ -1,5 +1,5 @@
 
-SUBDIRS = . sample
+SUBDIRS = . sample clsinline
 
 AM_CXXFLAGS= -g3 -O3 --std=gnu++14 -Wall
 

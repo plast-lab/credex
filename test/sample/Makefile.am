@@ -4,23 +4,15 @@ AM_CXXFLAGS= -g3 -O3 --std=gnu++14 -Wall
 #
 # Include paths for tests
 #
-#include ../../Incpath.am.inc
 
 AM_CPPFLAGS = -I@top_srcdir@/includes -I/usr/include/jsoncpp
 AM_CPPFLAGS += -I@top_srcdir@/test/googletest-release-1.7.0/include 
 AM_CPPFLAGS += -I@top_srcdir@/test/clue
 
-
-
 #
 # Set up for dalvik tests
 #
-TEST_EXTENSIONS= .py
-PY_LOG_COMPILER= $(PYTHON)
-AM_TESTS_ENVIRONMENT= PYTHONPATH=@abs_top_srcdir@/test; export PYTHONPATH; 
-AM_TESTS_ENVIRONMENT+= PYTHON=$(PYTHON); export PYTHON; ANDROID_SDK_ROOT=$(ANDROID_SDK_ROOT); export ANDROID_SDK_ROOT;
-#AM_PY_LOG_FLAGS= -v
-
+include ../python-tests.am.inc
 
 #
 # The list of tests to run

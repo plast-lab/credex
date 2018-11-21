@@ -87,6 +87,7 @@ AC_CONFIG_FILES([
         Makefile        
         test/Makefile
         test/sample/Makefile
+        test/clsinline/Makefile
 ])
 
 ### This is not enabled,  --deleted: as it would interfere with the testing code
