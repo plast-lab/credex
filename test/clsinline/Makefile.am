@@ -1,5 +1,5 @@
 
-AM_CXXFLAGS= -g3 -O3 --std=gnu++14 -Wall
+AM_CXXFLAGS= -g -O3 --std=gnu++14 -Wall
 
 #
 # Include paths for tests
@@ -46,12 +46,39 @@ CLASSPATH=$(subst $() $(),:,$(wildcard @top_srcdir@/test/java/*.jar))
 #  cls_test definitions
 #
 
-cls_test_SOURCES = ClsTest.cpp
+cls_test_SOURCES = ClsTest.cpp ClsInlinePass.cpp
 cls_test_LDADD = $(TEST_LIBS)
 cls_test_LDFLAGS= $(TEST_LDFLAGS)
 
+EXTRA_cls_test_DEPENDENCIES = \
+   trivial.dex trivial-test.dex \
+   @top_builddir@/libcredex.la
 
-# EXTRA_sample_test_DEPENDENCIES = sample-classes.dex @top_builddir@/libcredex.la
+%.dex: %.jar
+	$(DX) --dex --output=$@ $^
+
+%-test.jar:
+	echo Making test $*
+	/usr/bin/test -d $*/test
+	-rm -r $*/build
+	mkdir -p $*/build
+	$(JAVAC) $(JAVACFLAGS) -cp $(CLASSPATH):$*.jar -d $*/build `find $*/test -name "*.java"`
+	jar cf $@ -C $*/build .
+	-rm -r $*/build
+
+%.jar:
+	echo "Making normal jar"
+	/usr/bin/test -d $*/java
+	-rm -r $*/build
+	mkdir -p $*/build
+	$(JAVAC) $(JAVACFLAGS) -cp $(CLASSPATH) -d $*/build `find $*/java -name "*.java"`
+	jar cf $@ -C $*/build .
+	-rm -r $*/build
+
+trivial.jar: trivial/java/HostClass.java trivial/java/RsrcClass.java
+trivial-test.jar: trivial/test/TrivialTest.java trivial.jar
+
+
 
 # sample-classes.jar: testing/SampleClass.java
 #	mkdir -p sample-classes
