@@ -13,10 +13,10 @@ void ExplicitInlinePass::create_instanceof(IRList::iterator& true_block_it,
 {
   auto instance_of_insn = new IRInstruction(OPCODE_INSTANCE_OF);
   auto move_res = new IRInstruction(IOPCODE_MOVE_RESULT_PSEUDO);
-  
   instance_of_insn->set_src(0, this_reg);
   instance_of_insn->set_type(type);
   move_res->set_dest(dst_location);
+
   instanceof_it = caller_code->insert_after(true_block_it, instance_of_insn);
   instanceof_it = caller_code->insert_after(instanceof_it, move_res);
 }
@@ -63,20 +63,25 @@ void ExplicitInlinePass::eval_pass(DexStoresVector& stores,
                                    ConfigFiles& cfg,
                                    PassManager& mgr)
 {
-  FileParser::parse_file("../../imethods.txt", imethods, sorted_callers);  
+  FileParser::parse_file("imethods.txt", imethods, sorted_callers);  
   std::cout << "file parsing ended " << imethods.size() << std::endl;
+  // for(auto caller : sorted_callers){
+  //   for(auto insn : imethods[caller]){
+  //     for(auto callee : insn.second){
+  //       std::cout << "callee_code = " << show(callee->get_code()) << std::endl;
+  //     }
+  //   }
+  // }
 }
 
 void ExplicitInlinePass::run_pass(DexStoresVector& stores, 
                                   ConfigFiles& cfg, 
                                   PassManager& mgr) 
 {
-  DexMethod *callee;
   MethodsToInline mti;
   uint16_t offset, idx;
-  IRList::iterator it, it2;  
+  IRList::iterator it;  
   MethodImpls method_impls;
-  std::string caller_str, callee_name;
 
   for(auto caller : sorted_callers){
 
@@ -85,27 +90,29 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
     auto caller_mc = new MethodCreator(caller);
 
     for(auto map_it = mti.begin(); map_it != mti.end(); map_it++){
+      idx = 0;
+      offset = 0;
       inline_stats.callsites++;
 
       for(it = caller_code->begin(); it != caller_code->end(); it++){
+        idx++;
+        offset++;
+
         if (it->type != MFLOW_OPCODE) continue;
         if(!is_invoke(it->insn->opcode())){
           continue;
         }
 
-        
         if(*(map_it->first.insn) == *(it->insn)){
           break;
-       }
+        }
       }
 
       //the invocation is already inlined or removed
       //by previous optimizations
       if(it == caller_code->end()){
-        // std::cout << "not in list" << std::endl;
         continue;
       } 
-      
       
       method_impls = map_it->second;
       if(method_impls.size() > 1){
@@ -120,8 +127,27 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
         erase_it = it;  //iterator to erase the invoke instruction after it's inlined
         true_block_it = it;
         insn = it->insn;
-        this_reg = insn->src(0);
+        this_reg = map_it->first.insn->src(0);
         main_block_it = ++it;
+
+        // find the move-result after the invoke, if any
+        auto move_res_it = erase_it;
+        while (move_res_it++ != caller_code->end() && move_res_it->type != MFLOW_OPCODE);
+        if (is_move_result(move_res_it->insn->opcode())) {
+          true_block_it = move_res_it; 
+          main_block_it = move_res_it;
+          main_block_it++;
+        }
+        else{
+          move_res_it = caller_code->end();
+        }
+        
+        // auto dst = caller_code->get_registers_size();
+        // caller_code->set_registers_size(dst + 1);
+        // auto move_insn = new IRInstruction(OPCODE_MOVE_OBJECT);
+        // move_insn->set_dest(dst);
+        // move_insn->set_src(0, this_reg);
+       // caller_code->insert_after(std::prev(erase_it), move_insn);
         
         for(auto callee : method_impls){
           inline_stats.total_meths++;
@@ -141,39 +167,40 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
               type, this_reg, dst_location);
           create_guards(main_block_it, true_block_it, false_block_it, 
               instanceof_it, idx, offset, dst_location, caller_code);
-
+          
           //create new invoke instruction to add to the false block
           //in order to inline the callee later
           auto invoke_insn = new IRInstruction(insn->opcode());
           invoke_insn->set_method(callee)->set_arg_word_count(insn->arg_word_count());
 
           for (uint16_t i = 0; i < insn->srcs().size(); i++) {
-            invoke_insn->set_src(i, insn->srcs().at(i));
+            invoke_insn->set_src(i, insn->src(i));
           }
 
           if (false_block_it == caller_code->end()) {
             caller_code->push_back(invoke_insn);
-            std::prev(caller_code->end());
+            false_block_it = std::prev(caller_code->end());
           } else {
             false_block_it = caller_code->insert_after(false_block_it, invoke_insn);
           }
+          if(move_res_it != caller_code->end()){
+              auto move_res_insn = new IRInstruction(move_res_it->insn->opcode());
+              move_res_insn->set_dest(move_res_it->insn->dest());
+              caller_code->insert_after(false_block_it, move_res_insn);
+            }
 
-          caller_mc->create();
           inliner::inline_method(caller->get_code(),
                                  callee->get_code(),
                                  false_block_it);
+          change_visibility(callee);
+          // std::cout << "caller after inlining " << show(caller_code) << std::endl;
         }
-
-        // if the callee returns anything other than void,
-        //find the move-result after the invoke
-        auto move_res = erase_it;
-        while (move_res++ != caller_code->end()){
-          if (move_res->type == MFLOW_OPCODE && 
-              is_move_result(move_res->insn->opcode())) break;
-        }
+        caller_mc->create();
         //erases the iterator and deletes the MethodItemEntry
-        caller_code->erase_and_dispose(erase_it);
-        caller_code->erase_and_dispose(move_res);    
+        caller_code->erase_and_dispose(erase_it); 
+        if(move_res_it != caller_code->end()){
+          caller_code->erase_and_dispose(move_res_it);      
+        }       
       }
       else if(method_impls.size() == 1){
         inline_stats.total_meths++;
@@ -182,8 +209,9 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
         if(it->insn->opcode() == OPCODE_INVOKE_INTERFACE)
           inline_stats.invoke_interface++;
 
-        callee = *method_impls.begin();
+        auto callee = *method_impls.begin();
         inliner::inline_method(caller->get_code(), callee->get_code(), it);
+        change_visibility(callee);
       }
     }
   }           
