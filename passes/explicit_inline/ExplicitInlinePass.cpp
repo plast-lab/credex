@@ -104,15 +104,18 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
         }
 
         if(*(map_it->first.insn) == *(it->insn)){
+          if(it->insn->opcode() == OPCODE_INVOKE_VIRTUAL)
+            inline_stats.invoke_virtual++;
+          if(it->insn->opcode() == OPCODE_INVOKE_INTERFACE)
+            inline_stats.invoke_interface++;
           break;
-        }
+        } 
+        
       }
 
-      //the invocation is already inlined or removed
-      //by previous optimizations
-      if(it == caller_code->end()){
-        continue;
-      } 
+      //the invocation is already inlined 
+      //or removed by previous optimizations
+      if(it == caller_code->end()) continue;
       
       method_impls = map_it->second;
       if(method_impls.size() > 1){
@@ -121,53 +124,46 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
         DexType* type;
         uint16_t this_reg;
         IRInstruction *insn;
-        IRList::iterator erase_it, true_block_it, 
-        main_block_it, false_block_it, instanceof_it;
+        IRList::iterator true_block_it, main_block_it, 
+            false_block_it, instanceof_it;
 
-        erase_it = it;  //iterator to erase the invoke instruction after it's inlined
         true_block_it = it;
         insn = it->insn;
         this_reg = map_it->first.insn->src(0);
-        main_block_it = ++it;
+        main_block_it = std::next(it);
 
         // find the move-result after the invoke, if any
-        auto move_res_it = erase_it;
+        auto move_res_it = it;
         while (move_res_it++ != caller_code->end() && move_res_it->type != MFLOW_OPCODE);
         if (is_move_result(move_res_it->insn->opcode())) {
           true_block_it = move_res_it; 
-          main_block_it = move_res_it;
-          main_block_it++;
+          main_block_it = std::next(move_res_it);
         }
         else{
           move_res_it = caller_code->end();
         }
-        
-        // auto dst = caller_code->get_registers_size();
-        // caller_code->set_registers_size(dst + 1);
-        // auto move_insn = new IRInstruction(OPCODE_MOVE_OBJECT);
-        // move_insn->set_dest(dst);
-        // move_insn->set_src(0, this_reg);
-       // caller_code->insert_after(std::prev(erase_it), move_insn);
-        
+
+        //get next free register to use as destination register
+        //for the instance_of instructions and the new move_result 
+        auto dst_location = caller_code->get_registers_size();
+        caller_code->set_registers_size(dst_location+1);
+                
+        uint16_t count = 0;
         for(auto callee : method_impls){
+          count++;
           inline_stats.total_meths++;
-          if(it->insn->opcode() == OPCODE_INVOKE_VIRTUAL)
-            inline_stats.invoke_virtual++;
-          if(it->insn->opcode() == OPCODE_INVOKE_INTERFACE)
-            inline_stats.invoke_interface++;
-
-          type = callee->get_class();
-
-          //get next free register to use as destination register
-          //for instance_of instruction
-          auto dst_location = caller_code->get_registers_size();
-          caller_code->set_registers_size(dst_location+1);
-
-          create_instanceof(true_block_it, instanceof_it, caller_code,
-              type, this_reg, dst_location);
-          create_guards(main_block_it, true_block_it, false_block_it, 
-              instanceof_it, idx, offset, dst_location, caller_code);
           
+          if(count < method_impls.size()){
+            type = callee->get_class();
+            create_instanceof(true_block_it, instanceof_it, caller_code,
+              type, this_reg, dst_location);
+            create_guards(main_block_it, true_block_it, false_block_it, 
+                instanceof_it, idx, offset, dst_location, caller_code);
+          }
+          else{
+            false_block_it = true_block_it;
+          }
+   
           //create new invoke instruction to add to the false block
           //in order to inline the callee later
           auto invoke_insn = new IRInstruction(insn->opcode());
@@ -181,34 +177,29 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
             caller_code->push_back(invoke_insn);
             false_block_it = std::prev(caller_code->end());
           } else {
-            false_block_it = caller_code->insert_after(false_block_it, invoke_insn);
+            false_block_it = caller_code->insert_after(false_block_it, invoke_insn); 
           }
           if(move_res_it != caller_code->end()){
-              auto move_res_insn = new IRInstruction(move_res_it->insn->opcode());
-              move_res_insn->set_dest(move_res_it->insn->dest());
-              caller_code->insert_after(false_block_it, move_res_insn);
-            }
+            auto move_res_insn = new IRInstruction(move_res_it->insn->opcode());
+            move_res_insn->set_dest(move_res_it->insn->dest());
+            caller_code->insert_after(false_block_it, move_res_insn);
+          }
 
           inliner::inline_method(caller->get_code(),
                                  callee->get_code(),
                                  false_block_it);
+          
           change_visibility(callee);
-          // std::cout << "caller after inlining " << show(caller_code) << std::endl;
         }
         caller_mc->create();
-        //erases the iterator and deletes the MethodItemEntry
-        caller_code->erase_and_dispose(erase_it); 
+        // erases the iterator and deletes the MethodItemEntry
+        caller_code->erase_and_dispose(it); 
         if(move_res_it != caller_code->end()){
           caller_code->erase_and_dispose(move_res_it);      
-        }       
+        }  
       }
       else if(method_impls.size() == 1){
         inline_stats.total_meths++;
-        if(it->insn->opcode() == OPCODE_INVOKE_VIRTUAL)
-          inline_stats.invoke_virtual++;
-        if(it->insn->opcode() == OPCODE_INVOKE_INTERFACE)
-          inline_stats.invoke_interface++;
-
         auto callee = *method_impls.begin();
         inliner::inline_method(caller->get_code(), callee->get_code(), it);
         change_visibility(callee);
