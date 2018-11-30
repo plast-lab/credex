@@ -143,7 +143,7 @@ IRList is just a list of MethodItemEntry objects. Each MethodItemEntry object is
 can hold TryEntry, CatchEntry, IRInstruction or BranchTarget items.
 - A newer API for code is in namespace cfg (stands for control flow graph), namely classes cfg::ControlFlowGraph
 and cfg::Block.
-
+q
 Currently, facebook-redex is transiting code manipulation from the IRCode API to the new cfg API.
 
 Normally, one need not work with DexCode objects; the library creates IRCode objects for all methods at load
