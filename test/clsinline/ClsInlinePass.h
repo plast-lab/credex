@@ -16,6 +16,6 @@ public:
 private:
 	std::string host_name;
 	std::string inlined_name;
-  
+  	std::string inlined_attr;
 };
 
