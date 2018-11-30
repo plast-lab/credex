@@ -19,9 +19,9 @@ namespace proc = boost::process;
 class TempDir
 {
 public:
-	
+
 	static const char* default_model;
-	
+
 	/**
 	   @brief construct a new object and a new temp directory
 
@@ -40,7 +40,7 @@ public:
 	inline TempDir()
 		: TempDir(fs::temp_directory_path(), fs::path(default_model))
 		{}
-	
+
 	/**
 	   @brief Create a new temporary directory.
 
@@ -53,7 +53,7 @@ public:
 	   random digits in an attempt to construct a unique name.
 
 
-	   @param temp  the directory inside which the new directory 
+	   @param temp  the directory inside which the new directory
 	                will be created
 	   @param model the pattern model for the new directory
 	   @return  the path name to the newly created directory
@@ -86,7 +86,7 @@ public:
 		_keep = o._keep;
 		return *this;
 	}
-	
+
 	~TempDir() {
 		if(!_keep && !p.empty()) fs::remove_all(p);
 	}
@@ -94,7 +94,7 @@ public:
 	const fs::path& dir() const { return p; }
 
 	operator fs::path () const { return p; }
-	
+
 	inline void keep() { _keep = true; }
 	inline bool is_kept() const { return _keep; }
 private:
@@ -118,23 +118,10 @@ public:
 	std::vector<fs::path> dexen;
 	bool verbose = true;
 	
-	fs::path get_python3() {
-		auto py = std::getenv("PYTHON");
-		if(py) return py;
-		fs::path python = proc::search_path("python3");
-		if(! python.empty()) return python;
-		// This may yield python 2.*, but it's the best we can do at
-		// this point...
-		python = proc::search_path("python");
-		if(! python.empty()) return python;
-		throw std::runtime_error("Cannot locate python executable!");
-	}
-	
+	fs::path get_python3();
 	int call(const std::string& cmd, const std::vector<std::string>& a);
 
 	bool operator()(const std::string& jclass) {
 		return call("test", {jclass})==0;
 	}
 };
-
-

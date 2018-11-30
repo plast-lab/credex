@@ -31,7 +31,7 @@ class AndroidSdk:
         if ah is None:
             ah = os.getenv('ANDROID_HOME')
 
-        # The newer envvar 
+        # The newer envvar
         if ah is None:
             ah = os.getenv('ANDROID_SDK_ROOT')
 
@@ -100,7 +100,7 @@ class AndroidSdk:
                 pass
         return None
 
-        
+
     def emulator(self, avd=None):
         """Return an Emulator object for a given avd"""
         all_avds = self.get_avds()
@@ -110,7 +110,7 @@ class AndroidSdk:
 
         if avd is not None and avd not in all_avds:
             raise ValueError("AVD named "+str(avd)+" does not exist")
-        
+
         emu = self.scan_emulators(avd)
         if emu is not None:
             return emu
@@ -124,14 +124,14 @@ class AndroidSdk:
                 return emu
 
         raise RuntimeError("Could not start AVD",avd)
-        
-        
+
+
     def get_avds(self):
         """Return a list of installed AVD names"""
         out = sp.check_output([self.cmd(*EMULATOR),'-list-avds'])
         return [l.rstrip(b"\r\n").decode('utf-8')
                 for l in io.BytesIO(out).readlines()]
-    
+
     def cmd(self, *pc):
         return os.path.join(self.root, *pc)
 
@@ -142,7 +142,7 @@ try:
     device= SDK.device
     devices = SDK.devices
     get_avds = SDK.get_avds
-    cmd = SDK.cmd    
+    cmd = SDK.cmd
 except:
     pass
 
@@ -152,10 +152,10 @@ class Device:
     Instances of this class encapsulate an android device
     (real or emulated) connected to this machine.
 
-    Methods support accessing the device (via adb) to 
+    Methods support accessing the device (via adb) to
     perform various operations.
     """
-    
+
     def __init__(self, serial=None, sdk=SDK):
         """
         Construct a device with given serial name and accessible
@@ -182,7 +182,7 @@ class Device:
         Return a command list for passing and adb invocation
         to the subprocess.run method (and its variants).
 
-        For each arg which is an instance of list or tuple, its 
+        For each arg which is an instance of list or tuple, its
         elements are recursively added to the command, else the
         arg is transformed into a string and added to the command.
         """
@@ -197,8 +197,8 @@ class Device:
                 if isinstance(arg, (tuple, list)):
                     append_args(arg)
                 else:
-                    cmdlist.append(str(arg))        
-        
+                    cmdlist.append(str(arg))
+
         append_args(args)
         return cmdlist
 
@@ -218,8 +218,8 @@ class Device:
     def shell(self, *args, **run_kwargs):
         cmd = self.adb('shell', '-n', args)
         return sp.run(cmd, universal_newlines=True, **run_kwargs)
-        
-    
+
+
     def shell_output(self, *args, **run_kwargs):
         """
         Execute an adb shell command.
@@ -247,8 +247,8 @@ class Device:
         finally:
             Local = [str(name) for name in local_paths]
         return sp.run(self.adb('push', Local, remote_path), **run_args)
-        
-    
+
+
     def dalvikvm(self, cls, *dexen, **run_kwargs):
         """\
         Run a class in dalvikvm, using local .dex files as classpath.
@@ -332,7 +332,7 @@ class EmulatorConsole:
     ROK = re.compile(b"OK\r\n")
     RKO = re.compile(b"KO:.*\r\n")
     EXPECT_LIST = [ROK,RKO]
-                
+
     def cmd(self, *args):
         # Create and send command
         def flatten_args(args):
@@ -365,7 +365,7 @@ class EmulatorConsole:
             resperr = None
         else:
             resperr = rspdata[rspmatch.start()+3:-2].decode('utf-8')
-        
+
         return (resperr, resplines)
 
     def check_cmd(self, *args):
@@ -375,14 +375,14 @@ class EmulatorConsole:
         return rlines
 
     __call__ = check_cmd
-    
+
     def auth(self):
         # Get the authentication token
         auth_token_file = os.path.join(os.getenv("HOME"),
                                        ".emulator_console_auth_token")
         with open(auth_token_file) as f:
             auth_token = f.readline()
-        
+
         # Start by authenticating
         retval =  self.check_cmd("auth",auth_token)
         self.__auth = True
@@ -394,7 +394,7 @@ class EmulatorConsole:
     def ping(self):
         return self.check_cmd("ping")
 
-    
+
 
 class Emulator(Device):
     def __init__(self, port, sdk=SDK):
@@ -408,7 +408,7 @@ class Emulator(Device):
             # emulator
             con.auth()
             self.avd = con.avd
-            
+
         serial = ("emulator-%d" % int(port))
         super().__init__(serial, sdk)
 
@@ -419,7 +419,7 @@ class Emulator(Device):
         with closing(self.console()) as con:
             con.auth()
             con.cmd("kill")
-    
+
     @classmethod
     def start(cls, avd, port, sdk=SDK):
         cmd = [sdk.cmd(*EMULATOR),
@@ -446,13 +446,13 @@ class Emulator(Device):
             except:
                 pass
 
-            try_loops += 1 
+            try_loops += 1
             if check_flag or try_loops>20:
                 break
 
             # wait for next loop
             time.sleep(0.2)
-            
+
         if check_flag:
             return Emulator(port, sdk)
         else:
@@ -470,7 +470,7 @@ def cmd_list_avds(options, args):
 
     for avd in get_avds():
         print(avd)
-    return 0    
+    return 0
 
 def cmd_devices(options, args):
     ensure(len(args)==1, "Arguments after command")
@@ -478,14 +478,14 @@ def cmd_devices(options, args):
     ensure(not options.dexen, "DEX files were specified!")
 
     if options.serial is None:
-        for d in devices():            
+        for d in devices():
             print(d[0])
     else:
         d = device(options.serial)
         if d.state(stderr=sp.STDOUT) is not None:
             print(d.serial)
 
-    return 0 
+    return 0
 
 
 def cmd_start(options, args):
@@ -538,9 +538,9 @@ def do_run(jclass, jargs, dexes, options, args):
     dev.wait_for('device', timeout=8)
     if options.verbose:
         print("dalvikvm ",jclass,*jargs,"  --classpath:",dexes)
-    dev.dalvikvm([jclass]+jargs, *dexes)
+    rcmd = dev.dalvikvm([jclass]+jargs, *dexes)
 
-    return 0
+    return rcmd.returncode
 
 def cmd_run(options, args):
     ensure(len(args)>=2,"No class to run is specified")
@@ -548,19 +548,19 @@ def cmd_run(options, args):
     return do_run(args[1], args[2:], dexes, options, args)
 
 def cmd_test(options, args):
-    # Locate the junit.dex file in the directory of androidctl.py    
+    # Locate the junit.dex file in the directory of androidctl.py
     dexes = [os.path.join(credex_test_path, "junit.dex")]
     test_classes = args[1:]
     return do_run("org.junit.runner.JUnitCore", test_classes, dexes, options, args)
 
-    
+
 
 def main(argv):
     op = OptionParser(usage="usage: %prog [options] command ...", version="%prog 1.0")
     op.add_option("-a","--avd",dest="avd", default=None, help="Specify the AVD to use")
     op.add_option("-v","--verbose", action="store_true", default=False, help="Trace the execution steps")
     op.add_option("-s","--serial", dest="serial", default=None, help="Specify the device to use")
-    op.add_option("-d","--dex",dest="dexen", action="append", default=list(), 
+    op.add_option("-d","--dex",dest="dexen", action="append", default=list(),
         help="load .dex file (or directory)")
 
     options, args = op.parse_args()
@@ -603,10 +603,3 @@ Commands:
 
 if __name__=='__main__':
     sys.exit(main(sys.argv[1:]))
-
-    
-
-    
-
-
-
