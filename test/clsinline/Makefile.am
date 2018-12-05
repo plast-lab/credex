@@ -1,12 +1,13 @@
 
-AM_CXXFLAGS= -g -O3 --std=gnu++14 -Wall
+AM_CXXFLAGS= -g --std=gnu++14 -Wall
+#AM_CXXFLAGS= -g -O3 --std=gnu++14 -Wall
 
 #
 # Include paths for tests
 #
 
 AM_CPPFLAGS = -I@top_srcdir@/includes -I/usr/include/jsoncpp
-AM_CPPFLAGS += -I@top_srcdir@/test/googletest-release-1.7.0/include 
+AM_CPPFLAGS += -I@top_srcdir@/test/googletest-release-1.7.0/include
 AM_CPPFLAGS += -I@top_srcdir@/test/clue
 
 #
@@ -33,12 +34,12 @@ TEST_LDFLAGS= \
 #
 # The list of tests to run
 #
-TESTS =  cls_test 
+TESTS =  cls_test
 VERBOSE=1
 
 #
 # Java variables and targets
-# 
+#
 
 CLASSPATH=$(subst $() $(),:,$(wildcard @top_srcdir@/test/java/*.jar))
 
@@ -46,7 +47,7 @@ CLASSPATH=$(subst $() $(),:,$(wildcard @top_srcdir@/test/java/*.jar))
 #  cls_test definitions
 #
 
-cls_test_SOURCES = ClsTest.cpp ClsInlinePass.cpp
+cls_test_SOURCES = ClsTest.cpp ClsInlinePass.cpp ClsInliner.cpp
 cls_test_LDADD = $(TEST_LIBS)
 cls_test_LDFLAGS= $(TEST_LDFLAGS)
 
@@ -77,19 +78,6 @@ EXTRA_cls_test_DEPENDENCIES = \
 
 trivial.jar: trivial/java/HostClass.java trivial/java/RsrcClass.java
 trivial-test.jar: trivial/test/TrivialTest.java trivial.jar
-
-
-
-# sample-classes.jar: testing/SampleClass.java
-#	mkdir -p sample-classes
-#	$(JAVAC) $(JAVACFLAGS) -cp $(CLASSPATH) -d sample-classes $^
-#	jar cf $@ -C sample-classes .
-
-# export JAVA=@JAVA@
-#sample-classes.dex: sample-classes.jar
-#	$(DX) --dex --output=$@ $^
-
-
 
 #
 # Test programs plus utilities
