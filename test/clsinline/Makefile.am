@@ -21,13 +21,13 @@ include ../python-tests.am.inc
 TEST_LIBS = \
   @top_builddir@/test/libcluetesting.la \
   @top_builddir@/test/libgtest_main.la \
+  @top_builddir@/libcredex.la \
   @top_builddir@/libredex.la \
   $(BOOST_FILESYSTEM_LIB) \
   $(BOOST_SYSTEM_LIB)
 
 
 TEST_LDFLAGS= \
- -Wl,--whole-archive,--library-path=@top_builddir@/.libs,-lcredex,--no-whole-archive \
  -rdynamic
 
 

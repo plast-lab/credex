@@ -38,7 +38,6 @@ libredex_la_SOURCES = \
 	@top_srcdir@/redex/libredex/IRList.cpp \
 	@top_srcdir@/redex/libredex/IRMetaIO.cpp \
 	@top_srcdir@/redex/libredex/IROpcode.cpp \
-	@top_srcdir@/redex/libredex/IRTypeChecker.cpp \
 	@top_srcdir@/redex/libredex/JarLoader.cpp \
 	@top_srcdir@/redex/libredex/Match.cpp \
 	@top_srcdir@/redex/libredex/MethodDevirtualizer.cpp \

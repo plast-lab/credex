@@ -37,7 +37,9 @@ AM_CPPFLAGS= -I@top_srcdir@/includes -I/usr/include/jsoncpp
 #               libcredex_passes.a and libredex_opt.a 
 #
 
-noinst_LTLIBRARIES= libredex.la libredex_opt.la libcredex_passes.la libcredex.la
+noinst_LTLIBRARIES= libredex_opt.la libcredex_passes.la
+
+lib_LTLIBRARIES = libcredex.la libredex.la
 
 # 
 # libredex.a   
@@ -94,7 +96,8 @@ credex_all_LDADD = \
 	$(BOOST_PROGRAM_OPTIONS_LIB) 
 
 credex_all_LDFLAGS = \
-	-Wl,--whole-archive,--library-path=.libs,-lcredex,--no-whole-archive\
+	-all-static \
+	 -Wl,--whole-archive,--library-path=@top_builddir@/.libs,./.libs/libcredex.a,--no-whole-archive \
 	-rdynamic # function names in stack traces
 
 
