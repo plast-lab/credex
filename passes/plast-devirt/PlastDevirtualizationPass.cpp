@@ -27,9 +27,13 @@ struct CallCounter {
   }
 };
 
+//TODO (hal)
+//check what happens if static versions are created
+//if so, make sure only these are going through devirtualization
+//this should fix the virtual zip bug for our run only
+//.
 
-
-void PlastDevirtualizationPass::run_pass(DexStoresVector& stores, ConfigFiles& ConfigFiles,
+void PlastDevirtualizationPass::run_pass(DexStoresVector& stores, ConfigFiles& cfg,
                                 PassManager& manager) {
 
   /* devirtualise invokations written from a file*/
@@ -37,9 +41,22 @@ void PlastDevirtualizationPass::run_pass(DexStoresVector& stores, ConfigFiles& C
   /* filename should be declared at the config file*/
 
   std::cout << "PlastDevirtPass started..." << std::endl;
-  //TODO file shouldn't be hard coded ?
-  std::string invokdevirtfile(invok_site_devirt_file);
-  std::string methoddevirtfile(invok_method_devirt_file);
+
+  std::string invokdevirtfile;
+  std::string methoddevirtfile;
+
+  const Json::Value& pass_args =
+      cfg.get_json_config()["PlastDevirtualizationPass"];
+  methoddevirtfile =
+    pass_args.get("GlobalDevirtTargets", invok_method_devirt_file).asString();
+  invokdevirtfile =
+    pass_args.get("LocalDevirtTargets", invok_site_devirt_file).asString();
+  only_devirtualize_invok_interface =
+    pass_args.get("OnlyDevirtInvokInterface", false).asBool();
+  zip_vv = pass_args.get("ZipVirtualVersion", false).asBool();
+
+  std::cout << invokdevirtfile << std::endl;
+  std::cout << methoddevirtfile << std::endl;
   std::map <std::string, ClassScopeInfo*> devirt_ins;
   std::vector <PlastMethodSpec*> devirt_ms;
   /*the struct above are the input files data */
@@ -92,7 +109,6 @@ void PlastDevirtualizationPass::parse_instructions_i(
   int lineId = -1;
   while (file.good()) {
     lineId++;
-
     std::getline(file, line, '\n');
     if (line.compare("") == 0)
       return;
@@ -247,8 +263,10 @@ void PlastDevirtualizationPass::devirt_targets(
 	const PlastMethodSpec& spec, std::map<PlastMethodSpec, MethodScopeInfo*>& ccls, DexMethod* const& method) {
 
     //std::cout << spec.name << spec.rtype  <<  std::endl;
-  if (ccls.find(spec) == ccls.end())
+
+  if  (ccls.find(spec) == ccls.end()) {
     return;
+  }
   auto lfm = ccls[spec]->info;
   auto irc = method->get_code();
   auto ircit = InstructionIterable(irc);
@@ -395,7 +413,8 @@ void PlastDevirtualizationPass::devirtualize(IRInstruction *insn, PlastMethodSpe
     l_metrics.num_invok_interface++;
 
   insn->set_opcode(OPCODE_INVOKE_STATIC)->set_method(ref);
-  //zip_virtual_version(cls, spec, ref);
+  if (this->zip_vv)
+    zip_virtual_version(cls, spec, ref);
 }
 
 
@@ -420,13 +439,14 @@ void PlastDevirtualizationPass::add_cast(
 }
 
 //Clearly not functional yet.
-//Will crash on recursive functions
+//Will crash on fblite, not on uber
 //Works fine on some small examples
 //TODO debug, solve the recursive functions problem here
 void PlastDevirtualizationPass::zip_virtual_version(DexClass* cls,
   PlastMethodSpec* mp, DexMethodRef* newmethod) {
   //change the virtual method to contain only 1 call
   // on the static version
+  std::cerr << "Dangerous function is called" << std::endl;
   DexMethod* method = NULL;
   for (auto meth :cls->get_vmethods()) {
     if (mp->compare(meth)) {
