@@ -2,7 +2,15 @@
    their containing classes. The input file is assumed to contain one
    JVM-style method descriptor per line (as in names contained in
    .smali files). Compared to opt/simpleinline/Deleter, Remover does
-   not run checks (like is_concrete() or can_delete()). */
+   not run checks (like is_concrete() or can_delete()).
+
+   This pass takes the following options:
+
+   - RemoverPass.rmethods: file containing the methods to remove.
+
+   - RemoverPass.amethods: file containing the methods to make abstract.
+
+*/
 
 #include <fstream>
 #include "Remover.h"
@@ -146,25 +154,20 @@ void RemoverPass::run_pass(DexStoresVector& dexen, ConfigFiles& cfg, PassManager
   CMethodStrs aMethodStrs;
   std::ifstream aFile;
 
-  // TODO: (vsam) These should be put in the PassConfig section!
-#if 0
-  f_name_rmethods = cfg.get_rmethods();
+  const Json::Value& pass_args = cfg.get_json_config()["RemoverPass"];
+  f_name_rmethods = pass_args.get("rmethods", std::string()).asString();
   if (f_name_rmethods.empty()) {
       f_name_rmethods = "methods_to_remove.csv";
-      std::cout << "Using default file " << f_name_rmethods << std::endl;
+      std::cout << "Using default file for methods to remove: " << f_name_rmethods << std::endl;
   } else
-      std::cout << "Using custom file " << f_name_rmethods << std::endl;
+      std::cout << "Using custom file for methods to remove" << f_name_rmethods << std::endl;
 
-  f_name_amethods = cfg.get_amethods();
+  f_name_amethods = pass_args.get("amethods", std::string()).asString();
   if (f_name_amethods.empty()) {
       f_name_amethods = "methods_to_make_abstract.csv";
-      std::cout << "Using default file " << f_name_amethods << std::endl;
+      std::cout << "Using default file for methods to make abstract: " << f_name_amethods << std::endl;
   } else
-      std::cout << "Using custom file " << f_name_amethods << std::endl;
-#endif
-
-cfg.get_json_config().get("rmethods", "methods_to_remove.csv", f_name_rmethods);
-cfg.get_json_config().get("amethods", "methods_to_make_abstract.csv", f_name_amethods);
+      std::cout << "Using custom file for methods to make abstract: " << f_name_amethods << std::endl;
 
   std::cout << "Reading list of methods to remove from " << f_name_rmethods << "..." << std::endl;
   read_methods(f_name_rmethods, rMethodStrs);
