@@ -200,7 +200,7 @@ void PlastDevirtualizationPass::scope_insert(
 
 void PlastDevirtualizationPass::devirt_methods(std::vector<DexClass*>& scope,
   std::vector<PlastMethodSpec*> methods) {
-  std::cout << "Starting devirtualizment " << std::endl;
+  std::cout << "Starting devirtualization" << std::endl;
   // create a vector to call the already built-in function
   std::unordered_set <DexMethod*> devirtualizable_methods;
   //here I need to get the DexMethod * from the class for each file entry
