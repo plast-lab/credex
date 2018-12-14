@@ -25,8 +25,7 @@ void ExplicitInlinePass::create_guards(IRList::iterator& main_block_it,
                                       IRList::iterator& true_block_it, 
                                       IRList::iterator& false_block_it,
                                       IRList::iterator& instanceof_it, 
-                                      uint16_t idx, 
-                                      const uint16_t offset, 
+                                      bool first_time, 
                                       const uint16_t dst_location, 
                                       IRCode*& caller_code)
 {
@@ -39,8 +38,8 @@ void ExplicitInlinePass::create_guards(IRList::iterator& main_block_it,
   auto goto_insn  = new IRInstruction(OPCODE_GOTO);
   auto goto_entry = new MethodItemEntry(goto_insn);
   IRList::iterator goto_it;
-  if(idx == offset){
-    idx++;
+  if(first_time){
+    first_time = false;
     goto_it = caller_code->insert_before(main_block_it, *goto_entry);
   }
   else{
@@ -63,15 +62,7 @@ void ExplicitInlinePass::eval_pass(DexStoresVector& stores,
                                    ConfigFiles& cfg,
                                    PassManager& mgr)
 {
-  FileParser::parse_file("imethods.txt", imethods, sorted_callers);  
-  std::cout << "file parsing ended " << imethods.size() << std::endl;
-  // for(auto caller : sorted_callers){
-  //   for(auto insn : imethods[caller]){
-  //     for(auto callee : insn.second){
-  //       std::cout << "callee_code = " << show(callee->get_code()) << std::endl;
-  //     }
-  //   }
-  // }
+  FileParser::parse_file("imethods.txt", imethods, sorted_callers);
 }
 
 void ExplicitInlinePass::run_pass(DexStoresVector& stores, 
@@ -79,48 +70,42 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
                                   PassManager& mgr) 
 {
   MethodsToInline mti;
-  uint16_t offset, idx;
   IRList::iterator it;  
   MethodImpls method_impls;
 
   for(auto caller : sorted_callers){
-
     mti = imethods[caller];
     auto caller_code = caller->get_code();
     auto caller_mc = new MethodCreator(caller);
 
     for(auto map_it = mti.begin(); map_it != mti.end(); map_it++){
-      idx = 0;
-      offset = 0;
+      bool first_time = true;
       inline_stats.callsites++;
 
       for(it = caller_code->begin(); it != caller_code->end(); it++){
-        idx++;
-        offset++;
-
         if (it->type != MFLOW_OPCODE) continue;
-        if(!is_invoke(it->insn->opcode())){
-          continue;
-        }
-
-        if(*(map_it->first.insn) == *(it->insn)){
-          if(it->insn->opcode() == OPCODE_INVOKE_VIRTUAL)
-            inline_stats.invoke_virtual++;
-          if(it->insn->opcode() == OPCODE_INVOKE_INTERFACE)
-            inline_stats.invoke_interface++;
-          break;
-        } 
-        
+        if(!is_invoke(it->insn->opcode())) continue;
+        if(map_it->first == (unsigned long)&*it)  break;
       }
 
       //the invocation is already inlined 
       //or removed by previous optimizations
-      if(it == caller_code->end()) continue;
-      
+      if(it == caller_code->end())  continue;
+
+      //gather statistics
+      if(it->insn->opcode() == OPCODE_INVOKE_DIRECT)
+        inline_stats.invoke_direct++;
+      if(it->insn->opcode() == OPCODE_INVOKE_STATIC)
+        inline_stats.invoke_static++;
+      if(it->insn->opcode() == OPCODE_INVOKE_SUPER)
+        inline_stats.invoke_super++;
+      if(it->insn->opcode() == OPCODE_INVOKE_VIRTUAL)
+        inline_stats.invoke_virtual++;
+      if(it->insn->opcode() == OPCODE_INVOKE_INTERFACE)
+        inline_stats.invoke_interface++;
+
       method_impls = map_it->second;
       if(method_impls.size() > 1){
-        inline_stats.need_guards++;
-
         DexType* type;
         uint16_t this_reg;
         IRInstruction *insn;
@@ -129,13 +114,15 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
 
         true_block_it = it;
         insn = it->insn;
-        this_reg = map_it->first.insn->src(0);
+        this_reg = insn->src(0);
         main_block_it = std::next(it);
 
         // find the move-result after the invoke, if any
         auto move_res_it = it;
-        while (move_res_it++ != caller_code->end() && move_res_it->type != MFLOW_OPCODE);
-        if (is_move_result(move_res_it->insn->opcode())) {
+        while(move_res_it++ != caller_code->end()){
+          if(move_res_it->type == MFLOW_OPCODE) break;
+        }
+        if(is_move_result(move_res_it->insn->opcode())) {
           true_block_it = move_res_it; 
           main_block_it = std::next(move_res_it);
         }
@@ -151,6 +138,7 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
         uint16_t count = 0;
         for(auto callee : method_impls){
           count++;
+          inline_stats.need_guards++;
           inline_stats.total_meths++;
           
           if(count < method_impls.size()){
@@ -158,7 +146,7 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
             create_instanceof(true_block_it, instanceof_it, caller_code,
               type, this_reg, dst_location);
             create_guards(main_block_it, true_block_it, false_block_it, 
-                instanceof_it, idx, offset, dst_location, caller_code);
+                instanceof_it, first_time, dst_location, caller_code);
           }
           else{
             false_block_it = true_block_it;
@@ -166,9 +154,9 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
    
           //create new invoke instruction to add to the false block
           //in order to inline the callee later
+          uint16_t arg_count = insn->arg_word_count();
           auto invoke_insn = new IRInstruction(insn->opcode());
-          invoke_insn->set_method(callee)->set_arg_word_count(insn->arg_word_count());
-
+          invoke_insn->set_method(callee)->set_arg_word_count(arg_count);
           for (uint16_t i = 0; i < insn->srcs().size(); i++) {
             invoke_insn->set_src(i, insn->src(i));
           }
@@ -180,37 +168,52 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
             false_block_it = caller_code->insert_after(false_block_it, invoke_insn); 
           }
           if(move_res_it != caller_code->end()){
-            auto move_res_insn = new IRInstruction(move_res_it->insn->opcode());
+            auto opcode = move_res_it->insn->opcode();
+            auto move_res_insn = new IRInstruction(opcode);
             move_res_insn->set_dest(move_res_it->insn->dest());
             caller_code->insert_after(false_block_it, move_res_insn);
           }
 
-          inliner::inline_method(caller->get_code(),
-                                 callee->get_code(),
-                                 false_block_it);
-          
+          inliner::inline_method(caller_code, callee->get_code(), false_block_it);          
           change_visibility(callee);
         }
         caller_mc->create();
-        // erases the iterator and deletes the MethodItemEntry
         caller_code->erase_and_dispose(it); 
         if(move_res_it != caller_code->end()){
           caller_code->erase_and_dispose(move_res_it);      
-        }  
+        } 
       }
       else if(method_impls.size() == 1){
         inline_stats.total_meths++;
+        if(it->insn->opcode() == OPCODE_INVOKE_VIRTUAL ||
+            it->insn->opcode() == OPCODE_INVOKE_INTERFACE){
+          inline_stats.devirtualizable++;
+        }
+    
         auto callee = *method_impls.begin();
-        inliner::inline_method(caller->get_code(), callee->get_code(), it);
+        inliner::inline_method(caller_code, callee->get_code(), it);
         change_visibility(callee);
       }
     }
-  }           
-  std::cout << "Total inlined methods : " << inline_stats.total_meths << std::endl;
-  std::cout << "Total invocation sites : " << inline_stats.callsites << std::endl;
-  std::cout << "Total virtual invocations : " << inline_stats.invoke_virtual << std::endl;
-  std::cout << "Total interface invocations : " << inline_stats.invoke_interface << std::endl;
-  std::cout << "Total virtual methods inlined with guarding : " << inline_stats.need_guards;
+  }
+
+  //statistics from parsing
+  std::cout << "Total methods parsed : " << FileParser::total_meths_parsed;
+  std::cout << "\nTotal unknown methods to Redex : " << FileParser::unknown_methods;
+  std::cout << "\nTotal methods with no code : " << FileParser::meths_with_no_code;
+  std::cout << "\nTotal methods with recursive calls : " << FileParser::recursive_calls;
+
+  //statistics from the pass
+  std::cout << "\nTotal inlined methods : " << inline_stats.total_meths;
+  std::cout << "\nTotal invocation sites : " << inline_stats.callsites;
+  std::cout << "\nTotal super invocations : " << inline_stats.invoke_super;
+  std::cout << "\nTotal static invocations : " << inline_stats.invoke_static;
+  std::cout << "\nTotal direct invocations : " << inline_stats.invoke_direct;
+  std::cout << "\nTotal virtual invocations : " << inline_stats.invoke_virtual;
+  std::cout << "\nTotal interface invocations : " << inline_stats.invoke_interface;
+  std::cout << "\nTotal virtual methods inlined with guards : " << inline_stats.need_guards;
+  std::cout << "\nTotal virtual methods inlined without guards : " << inline_stats.devirtualizable;
+  
   std::cout << std::endl << std::endl;
   std::cout << "Explicit inline pass done." << std::endl;
 }

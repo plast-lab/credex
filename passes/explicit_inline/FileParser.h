@@ -2,10 +2,13 @@
 #include "DexUtil.h"
 #include "DexClass.h"
 #include "Resolver.h"
+#include "ClassHierarchy.h"
 
 struct class_type_comparator {
-  bool operator()(const DexMethod* meth1, const DexMethod* meth2) const {
-    auto cls_type1 = type_class(meth1->get_class());
+private:
+	bool is_child(const DexMethod* meth1, const DexMethod* meth2) const
+	{
+		auto cls_type1 = type_class(meth1->get_class());
 	  auto cls_type2 = type_class(meth2->get_class());
 	  auto cls1 = cls_type1->get_super_class();
 	  auto cls2 = cls_type2->get_type();
@@ -21,20 +24,42 @@ struct class_type_comparator {
 	  }
 	  return false;
 	}
+
+	bool same_hierarchy(const DexMethod* meth1, const DexMethod* meth2) const
+	{
+		if(is_child(meth1, meth2) || is_child(meth2, meth1))
+			return true;
+
+		return false;
+	}
+
+public:
+  bool operator()(const DexMethod* meth1, const DexMethod* meth2) const 
+  {
+   	if(same_hierarchy(meth1, meth2)){
+   		return is_child(meth1, meth2);
+ 		}
+ 		else{
+ 			return compare_dexmethods(meth1, meth2);
+ 		}
+  }
 };
 
 struct mie_equal
 {
-	bool operator()(const MethodItemEntry& mie1, const MethodItemEntry& mie2) const
+	bool operator()(const MethodItemEntry& mie1, 
+									const MethodItemEntry& mie2) const
 	{
+		if(mie1.insn == mie2.insn){
+			std::cout << "insn1 = " << show(mie1.insn) << " insn2 = " << show(mie2.insn) << std::endl;
+			std::cout << "&mie1 = " << &mie1.insn << " &mie2 = " << &mie2.insn << std::endl;
+		}
 		return mie1.insn == mie2.insn;
 	}
-
 };
 
 struct mie_hasher
 {
-
   std::uint64_t operator()(const MethodItemEntry& mie) const
   {
   	auto insn = mie.insn;
@@ -79,16 +104,14 @@ struct mie_hasher
 	  }
 	    return result;
   }
-
-
 };
 
 using MethodImpls = std::set<DexMethod*, class_type_comparator>;
-using MethodsToInline = std::unordered_map<MethodItemEntry, MethodImpls, mie_hasher, mie_equal>;
+using MethodsToInline = std::unordered_map<unsigned long, MethodImpls>;
 using Inlinables = std::unordered_map<DexMethod*, MethodsToInline>;
 using ctc = std::unordered_map<DexMethod*, std::unordered_set<DexMethod*>>;
 
-class FileParser{  	 	
+class FileParser{  	 		
 
 	static void to_dalvik_format(std::string&);
 
@@ -97,21 +120,26 @@ class FileParser{
 	static void find_def(const std::string&, DexMethod*&);
 
 	static void analyze_method(std::string, std::string&, std::string&, 
-			std::string&, std::string&);
+														std::string&, std::string&);
 
 	static std::string convert_method(const std::string&, const std::string&,
-    	const std::string&, const std::string&);	
+    																const std::string&, const std::string&);	
 
 	static void analyze_invoc_id(const std::string, std::string&, std::string&, uint16_t&);
 
 	static void sort_callers(const ctc&, const ctc&, std::vector<DexMethod*>&);
 
   static void sort_callers(DexMethod*, const ctc&, const std::unordered_set<DexMethod*>&,
-   		std::unordered_set<DexMethod*>&, std::vector<DexMethod*>&);
+   													std::unordered_set<DexMethod*>&, std::vector<DexMethod*>&);
 
 public:
 
-	static void parse_file(const std::string, Inlinables&, std::vector<DexMethod*>&);
+	//some statistics
+	static uint64_t recursive_calls;
+  static uint64_t unknown_methods;
+	static uint64_t meths_with_no_code;
+  static uint64_t total_meths_parsed;
 
+	static void parse_file(const std::string, Inlinables&, std::vector<DexMethod*>&);
 };
 

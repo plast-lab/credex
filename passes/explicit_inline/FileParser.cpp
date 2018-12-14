@@ -61,8 +61,11 @@ std::string FileParser::transform_type(std::string java_type){
   return dalvik_type;
 }
 
-void FileParser::analyze_method(std::string method, std::string& cls, 
-    std::string& name, std::string& args, std::string& ret_type)
+void FileParser::analyze_method(std::string method, 
+                                std::string& cls, 
+                                std::string& name, 
+                                std::string& args, 
+                                std::string& ret_type)
 {
   std::stringstream ss(method);
 
@@ -75,8 +78,10 @@ void FileParser::analyze_method(std::string method, std::string& cls,
   cls = JavaNameUtil::external_to_internal(cls);
 }
 
-std::string FileParser::convert_method(const std::string &cls, const std::string &name,
-    const std::string &args, const std::string &ret_type)
+std::string FileParser::convert_method(const std::string &cls, 
+                                      const std::string &name,
+                                      const std::string &args, 
+                                      const std::string &ret_type)
 {
   return cls + "." + name + ":(" + args + ")" + ret_type;
 }
@@ -100,7 +105,9 @@ void FileParser::to_dalvik_format(std::string& method){
 }
 
 void FileParser::analyze_invoc_id(const std::string invocation_id, 
-    std::string& callsite, std::string& callee_name, uint16_t& offset)
+                                  std::string& callsite, 
+                                  std::string& callee_name, 
+                                  uint16_t& offset)
 {
   std::string off;
   std::stringstream ss(invocation_id);
@@ -115,19 +122,19 @@ void FileParser::find_def(const std::string& mstr, DexMethod*& method)
 {
   method = nullptr;
   auto ref = DexMethod::get_method(mstr);
- 
-  if(ref) method = resolve_method(ref, MethodSearch::Any);   
+  if(ref != nullptr){
+    method = resolve_method(ref, MethodSearch::Any);   
+  }
 }
 
 //sort callers to perform bottom-up inlining
-
 void FileParser::sort_callers(const ctc& callee_to_callers,
                               const ctc& caller_to_callees,
                               std::vector<DexMethod*>& sorted_callers) 
 {
   for (auto it : caller_to_callees) {
     auto caller = it.first;
-    //first fnd top level callers
+    //first find top level callers
     if (callee_to_callers.find(caller) != callee_to_callers.end()) continue;
 
     std::unordered_set<DexMethod*> visited;
@@ -148,10 +155,7 @@ void FileParser::sort_callers(DexMethod* caller,
 {
   for (auto callee : callees) {
     // if the call chain hits a call loop, ignore and keep going
-    if (visited.count(callee) > 0) {
-      // std::cout << "cycle detected " << callee->get_deobfuscated_name() <<std::endl; 
-      continue;
-    }
+    if (visited.count(callee) > 0)  continue;
 
     auto ctc_it = caller_to_callees.find(callee);
     if (ctc_it != caller_to_callees.end()) {
@@ -166,8 +170,14 @@ void FileParser::sort_callers(DexMethod* caller,
   }
 }
 
-void FileParser::parse_file(const std::string filename, Inlinables& imethods,
-    std::vector<DexMethod*>& sorted_callers)
+uint64_t FileParser::recursive_calls = 0;
+uint64_t FileParser::unknown_methods = 0;
+uint64_t FileParser::meths_with_no_code = 0;
+uint64_t FileParser::total_meths_parsed = 0;
+
+void FileParser::parse_file(const std::string filename, 
+                            Inlinables& imethods,
+                            std::vector<DexMethod*>& sorted_callers)
 {
   std::ifstream file(filename);
   ctc callee_to_callers, caller_to_callees;
@@ -177,8 +187,8 @@ void FileParser::parse_file(const std::string filename, Inlinables& imethods,
       uint16_t offset;
       std::string method, line, invocation_id, 
           callee_name, caller_str;
-
       std::getline(file, line);
+      
       //ignore empty lines
       if(line.length() > 0) {
         
@@ -188,33 +198,34 @@ void FileParser::parse_file(const std::string filename, Inlinables& imethods,
         std::getline (ss, method, '\n'); 
         IRList::iterator it;
 
+        FileParser::total_meths_parsed++;
         analyze_invoc_id(invocation_id, caller_str, callee_name, offset);
         to_dalvik_format(method);
         to_dalvik_format(caller_str);
         find_def(method, callee);
         find_def(caller_str, caller);   
-
+        
         /**
          * if the caller or callee method reference does not map 
          * to a known definition ignore it and don't inline.
          */
-        if(callee ==  nullptr || caller == nullptr) continue;
-
+        if(callee ==  nullptr || caller == nullptr){
+          FileParser::unknown_methods++;
+          continue;
+        } 
         /*ignore recursive calls*/
-        // if(caller->get_deobfuscated_name() == callee->get_deobfuscated_name()){
-        //   std::cout << "recursive call = " << callee->get_deobfuscated_name() << std::endl;
-        //   continue; 
-        // }
-
+        if(caller->get_deobfuscated_name() == callee->get_deobfuscated_name()){
+          FileParser::recursive_calls++;
+          continue; 
+        }
         if(!callee->get_code()){
-          // std::cout << "callee with no code = " << callee->get_deobfuscated_name() << std::endl;
+          FileParser::meths_with_no_code++;
           continue;
         }
-      
+
         uint16_t idx = 0;
         auto caller_code = caller->get_code();
         auto ii = InstructionIterable(caller_code);
-
         for(auto ii_it = ii.begin(); ii_it != ii.end(); ii_it++){
           if(is_invoke(ii_it->insn->opcode())){
             
@@ -223,12 +234,9 @@ void FileParser::parse_file(const std::string filename, Inlinables& imethods,
             meth = ii_it->insn->get_method()->get_class()->get_name()->str();
             meth = JavaNameUtil::internal_to_external(meth) + "." + name;
 
-            if(callee->c_str() == name && idx++ == offset){
-              // std::cout << "mie = " << *ii_it << std::endl;
-              // imethods[caller][*(ii_it->insn)].insert(callee);
-
-              imethods[caller][(*ii_it)].insert(callee);
-              // std::cout << "ii_it = " << *ii_it << std::endl;
+            if(callee_name == meth && idx++ == offset){
+              unsigned long mie_adr = (unsigned long) &*ii_it;
+              imethods[caller][mie_adr].insert(callee);
               callee_to_callers[callee].insert(caller);  
               caller_to_callees[caller].insert(callee);
               break;
