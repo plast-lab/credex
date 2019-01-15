@@ -180,6 +180,19 @@ PlastMethodSpec::PlastMethodSpec(const DexMethodRef *dm) {
   }
 }
 
+PlastMethodSpec::PlastMethodSpec(const DexMethodRef *dm, bool stat_version) {
+
+
+  this->name.assign(std::string("static_")+(dm->get_name()->str()));
+  this->rtype.assign(std::string(dm->get_proto()->get_rtype()->get_name()->str()));
+  this->args = new std::vector<std::string> ();
+  this->args->push_back(
+    dm->get_class()->get_name()->c_str());
+  for (size_t i=0; i < dm->get_proto()->get_args()->get_type_list().size(); i++) {
+    this->args->push_back(dm->get_proto()->get_args()->get_type_list()[i]->get_name()->str());
+  }
+}
+
 bool PlastMethodSpec::compare(const DexMethodRef* dm) const {
 
   if (this->name.compare(dm->get_name()->str()))

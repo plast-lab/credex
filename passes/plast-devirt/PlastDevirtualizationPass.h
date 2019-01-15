@@ -31,11 +31,12 @@ struct localDevirtutalizerMetrics {
 class PlastDevirtualizationPass : public Pass {
   public:
     PlastDevirtualizationPass(): Pass("PlastDevirtualizationPass"),
-    only_devirtualize_invok_interface(false){}
+    only_devirtualize_invok_interface(false),zip_vv(false){}
 
     virtual void run_pass(DexStoresVector&, ConfigFiles&, PassManager&) override;
 
     bool only_devirtualize_invok_interface;
+    bool zip_vv;
 
   private:
     DevirtualizerMetrics m_metrics;

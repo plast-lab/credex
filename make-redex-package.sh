@@ -5,7 +5,7 @@
 TMP_DIR=`mktemp -d`
 CURRENT_DIR="${PWD}"
 HEAD_HASH=`git rev-parse HEAD`
-REDEX_ZIP="${CURRENT_DIR}/redex-${HEAD_HASH}.zip"
+REDEX_ZIP="${CURRENT_DIR}/credex-${HEAD_HASH}.zip"
 
 autoreconf -ivf
 ./configure --prefix=${TMP_DIR}
