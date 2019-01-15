@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <unordered_map>
 #include <stdexcept>
 
 #include "TypeSystem.h"
@@ -85,10 +86,21 @@ struct BasicInliner : Inliner
 	DexClass* inlined;
 	DexField* inlined_field;
 
-	TypeVector common_superclasses;  /// CS
-	TypeVector host_superclasses;    /// HS
-	Scope inlined_superclasses;      /// IS
+	TypeVector common_superclasses;  //< CS
+	TypeVector host_superclasses;    //< HS
+	Scope inlined_superclasses;      //< IS
 
+
+	/// For f a field  of I,  replaced_field[f] is a field of
+	/// H constructed by this inliner
+	std::unordered_map<DexFieldRef*,DexField*>  replaced_field;
+
+	/// For m a method of I,  replaced_method[m] is a method of
+	/// H constructed by this inliner, referencing the inlined
+	/// fields
+	std::unordered_map<DexMethodRef*,DexMethod*>  replaced_method;
+	
+	
 	std::vector<DexField*> injected_fields;
 	std::vector<DexMethod*> injected_vmethods;
     
@@ -102,19 +114,30 @@ struct BasicInliner : Inliner
 	/// H and I
 	void resolve_superclasses();
 	
-	/// @brief Add attributes of inlined class to host
-	void inject_attributes();
+	/// @brief Add attribute of inlined class to host
+	/// @return the new field
+	DexField* inject_attribute(DexField* fld);
     
 	/// Add methods of inlined class to host
 	void inject_methods();
 
+	/// Add a new static method to construct inlined attributes
+	void inject_inlined_constructor();
+
 	/// Inject a method of inlined class to the host class
+	/// Note that the method code contains a copy of the
+	/// code of the original methd, and needs to be rewritten
+	
+	/// @return the new method
 	DexMethod* inject_method(DexMethodRef* m);
+
+	/// Rewrite the injected method to reference
+	/// the injected fields/methods
+	void rewrite_injected(DexMethod* inj_meth);
 	
 	/// Rewrite host constructors to inject calls to
 	/// I's constructors
 	void rewrite_host_constructors();
-	
 	
 	/// Rewrite host methods to replace uses of inlined_field
 	/// with appropriate code
