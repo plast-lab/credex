@@ -4,6 +4,8 @@
 #include "ClassHierarchy.h"
 #include "ExplicitInlinePass.h"
 
+#include "../simpleinline/Deleter.h"
+
 void ExplicitInlinePass::create_instanceof(IRList::iterator& true_block_it,
                                           IRList::iterator& instanceof_it,
                                           IRCode*& caller_code, 
@@ -73,6 +75,8 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
   IRList::iterator it;  
   MethodImpls method_impls;
 
+  std::unordered_set<DexMethod*> inlined;
+
   for(auto caller : sorted_callers){
     mti = imethods[caller];
     auto caller_code = caller->get_code();
@@ -108,7 +112,7 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
       if(method_impls.size() > 1){
         DexType* type;
         uint16_t this_reg;
-        IRInstruction *insn;
+        IRInstruction *insn, *invoke_insn, *move_res_insn;
         IRList::iterator true_block_it, main_block_it, 
             false_block_it, instanceof_it;
 
@@ -141,21 +145,17 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
           inline_stats.need_guards++;
           inline_stats.total_meths++;
           
-          if(count < method_impls.size()){
-            type = callee->get_class();
-            create_instanceof(true_block_it, instanceof_it, caller_code,
-              type, this_reg, dst_location);
-            create_guards(main_block_it, true_block_it, false_block_it, 
-                instanceof_it, first_time, dst_location, caller_code);
-          }
-          else{
-            false_block_it = true_block_it;
-          }
+          type = callee->get_class();
+          create_instanceof(true_block_it, instanceof_it, caller_code,
+            type, this_reg, dst_location);
+          create_guards(main_block_it, true_block_it, false_block_it, 
+              instanceof_it, first_time, dst_location, caller_code);
+
    
           //create new invoke instruction to add to the false block
           //in order to inline the callee later
           uint16_t arg_count = insn->arg_word_count();
-          auto invoke_insn = new IRInstruction(insn->opcode());
+          invoke_insn = new IRInstruction(insn->opcode());
           invoke_insn->set_method(callee)->set_arg_word_count(arg_count);
           for (uint16_t i = 0; i < insn->srcs().size(); i++) {
             invoke_insn->set_src(i, insn->src(i));
@@ -169,14 +169,23 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
           }
           if(move_res_it != caller_code->end()){
             auto opcode = move_res_it->insn->opcode();
-            auto move_res_insn = new IRInstruction(opcode);
+            move_res_insn = new IRInstruction(opcode);
             move_res_insn->set_dest(move_res_it->insn->dest());
             caller_code->insert_after(false_block_it, move_res_insn);
           }
 
           inliner::inline_method(caller_code, callee->get_code(), false_block_it);          
           change_visibility(callee);
+          inlined.insert(callee);
         }
+        //add new invoke instruction in case all guards fail
+        invoke_insn->set_method(insn->get_method());
+        true_block_it = caller_code->insert_after(true_block_it, invoke_insn);
+        //add move result instruction, if any
+        if(move_res_it != caller_code->end()){
+          caller_code->insert_after(true_block_it, move_res_insn);
+        }
+
         caller_mc->create();
         caller_code->erase_and_dispose(it); 
         if(move_res_it != caller_code->end()){
@@ -193,6 +202,7 @@ void ExplicitInlinePass::run_pass(DexStoresVector& stores,
         auto callee = *method_impls.begin();
         inliner::inline_method(caller_code, callee->get_code(), it);
         change_visibility(callee);
+        inlined.insert(callee);
       }
     }
   }
