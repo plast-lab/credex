@@ -102,7 +102,6 @@ libredex_opt_la_SOURCES= \
 	@top_srcdir@/redex/service/method-dedup/TypeTags.cpp \
 	@top_srcdir@/redex/service/reference-update/MethodReference.cpp \
 	@top_srcdir@/redex/service/reference-update/TypeReference.cpp \
-	@top_srcdir@/redex/service/switch-dispatch/SwitchDispatch.cpp \
-	@top_srcdir@/redex/tools/common/ToolsCommon.cpp
+	@top_srcdir@/redex/service/switch-dispatch/SwitchDispatch.cpp
 
 
