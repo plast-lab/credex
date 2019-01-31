@@ -24,9 +24,9 @@ VERBOSE=1
 # Libraries to link with the tests
 #
 TEST_LIBS = \
-  @top_builddir@/test/libcluetesting.la \
-  @top_builddir@/test/libgtest_main.la \
-  @top_builddir@/libredex.la
+	@top_builddir@/test/libcluetesting.la \
+	@top_builddir@/test/libgtest_main.la \
+	-lcredex
 
 
 #
@@ -42,7 +42,6 @@ CLASSPATH=$(subst $() $(),:,$(wildcard @top_srcdir@/test/java/*.jar))
 sample_test_SOURCES = SampleTest.cpp
 
 sample_test_LDADD = $(TEST_LIBS) \
-	@top_builddir@/libcredex.la \
 	$(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_SYSTEM_LIB)
 
@@ -50,11 +49,11 @@ sample_test_LDADD = $(TEST_LIBS) \
 # -Wl,--whole-archive,--library-path=@top_builddir@/.libs,-lcredex,--no-whole-archive \
 # -rdynamic
 
-sample_test_LDFLAGS=\
+sample_test_LDFLAGS=  -L@top_builddir@   \
  -rdynamic
 
 
-EXTRA_sample_test_DEPENDENCIES = sample-classes.dex @top_builddir@/libcredex.la
+EXTRA_sample_test_DEPENDENCIES = sample-classes.dex
 
 sample-classes.jar: testing/SampleClass.java
 	mkdir -p sample-classes

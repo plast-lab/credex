@@ -72,7 +72,8 @@ libcredex_passes_la_SOURCES=\
 libcredex_la_SOURCES=
 libcredex_la_LIBADD=\
 	libredex_opt.la \
-	libcredex_passes.la
+	libcredex_passes.la \
+	libredex.la
 
 #---------------------------------
 # Build targets

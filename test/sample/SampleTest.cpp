@@ -18,6 +18,10 @@
 #include "ClueTest.h"
 #include "AndroidTest.h"
 
+#include "MergerType.h"
+
+
+
 /**
   @fn SampleTests_sample1_Test()
   @brief A sample test case for libredex.
@@ -27,6 +31,8 @@
   the test case.
   */
 TEST(SampleTests, sample1) {
+
+  MergerType dummy_model;
 
   // This test is a self-contained routine, that just tests that the
   // test process's environment contains some useful variables
