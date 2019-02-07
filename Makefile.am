@@ -103,8 +103,8 @@ EXTRA_credex_all_DEPENDENCIES= libcredex.la
 
 
 credex_all_LDADD = \
-	libredex.la \
 	libredex_tools.la \
+	libredex.la \
 	$(BOOST_PROGRAM_OPTIONS_LIB) 
 
 credex_all_LDFLAGS = \
