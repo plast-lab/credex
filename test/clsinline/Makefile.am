@@ -24,7 +24,8 @@ TEST_LIBS = \
   @top_builddir@/libcredex.la \
   @top_builddir@/libredex.la \
   $(BOOST_FILESYSTEM_LIB) \
-  $(BOOST_SYSTEM_LIB)
+  $(BOOST_SYSTEM_LIB) \
+  -lpthread
 
 
 TEST_LDFLAGS= \

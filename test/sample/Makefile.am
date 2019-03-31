@@ -44,7 +44,8 @@ sample_test_SOURCES = SampleTest.cpp
 sample_test_LDADD = $(TEST_LIBS) \
 	@top_builddir@/libcredex.la \
 	$(BOOST_FILESYSTEM_LIB) \
-	$(BOOST_SYSTEM_LIB)
+	$(BOOST_SYSTEM_LIB) \
+	-lpthread
 
 #sample_test_LDFLAGS=\
 # -Wl,--whole-archive,--library-path=@top_builddir@/.libs,-lcredex,--no-whole-archive \

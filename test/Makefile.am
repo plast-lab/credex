@@ -1,5 +1,5 @@
 
-SUBDIRS = . sample clsinline
+SUBDIRS = . clsinline sample 
 
 AM_CXXFLAGS= -g3 -O3 --std=gnu++14 -Wall
 
@@ -24,8 +24,8 @@ libcluetesting_la_SOURCES= clue/ClueTest.cpp clue/AndroidTest.cpp
 libcluetesting_la_LIBADD= \
 	$(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_SYSTEM_LIB) \
-	$(BOOST_REGEX_LIB)
-
+	$(BOOST_REGEX_LIB) \
+	-lpthread
 
 
 check_DATA= junit.dex

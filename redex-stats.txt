@@ -1,0 +1,570 @@
+{
+	"input_stats" : 
+	{
+		"dexes_stats" : 
+		[
+			{
+				"num_annotations" : 4886,
+				"num_bytes" : 3443036,
+				"num_classes" : 1608,
+				"num_field_refs" : 15658,
+				"num_fields" : 14497,
+				"num_instructions" : 224578,
+				"num_method_refs" : 25660,
+				"num_methods" : 17438,
+				"num_protos" : 7168,
+				"num_static_values" : 318,
+				"num_strings" : 34943,
+				"num_type_lists" : 4119,
+				"num_types" : 4695
+			},
+			{
+				"num_annotations" : 14752,
+				"num_bytes" : 9168668,
+				"num_classes" : 7826,
+				"num_field_refs" : 42080,
+				"num_fields" : 40016,
+				"num_instructions" : 682853,
+				"num_method_refs" : 65514,
+				"num_methods" : 50414,
+				"num_protos" : 15276,
+				"num_static_values" : 1106,
+				"num_strings" : 75007,
+				"num_type_lists" : 8824,
+				"num_types" : 10634
+			},
+			{
+				"num_annotations" : 5583,
+				"num_bytes" : 5337744,
+				"num_classes" : 3726,
+				"num_field_refs" : 12959,
+				"num_fields" : 11960,
+				"num_instructions" : 494658,
+				"num_method_refs" : 34783,
+				"num_methods" : 30005,
+				"num_protos" : 7950,
+				"num_static_values" : 362,
+				"num_strings" : 36298,
+				"num_type_lists" : 4070,
+				"num_types" : 4729
+			}
+		],
+		"total_stats" : 
+		{
+			"num_annotations" : 25221,
+			"num_bytes" : 17949448,
+			"num_classes" : 13160,
+			"num_field_refs" : 70697,
+			"num_fields" : 66473,
+			"num_instructions" : 1402089,
+			"num_method_refs" : 125957,
+			"num_methods" : 97857,
+			"num_protos" : 30394,
+			"num_static_values" : 1786,
+			"num_strings" : 146248,
+			"num_type_lists" : 17013,
+			"num_types" : 20058
+		}
+	},
+	"output_stats" : 
+	{
+		"dexes_stats" : 
+		[
+			{
+				"num_annotations" : 1293,
+				"num_bytes" : 944356,
+				"num_classes" : 868,
+				"num_field_refs" : 2825,
+				"num_fields" : 2425,
+				"num_instructions" : 61183,
+				"num_method_refs" : 6362,
+				"num_methods" : 4241,
+				"num_protos" : 2321,
+				"num_static_values" : 26,
+				"num_strings" : 10807,
+				"num_type_lists" : 1598,
+				"num_types" : 2194
+			},
+			{
+				"num_annotations" : 2420,
+				"num_bytes" : 1549880,
+				"num_classes" : 1877,
+				"num_field_refs" : 5755,
+				"num_fields" : 5364,
+				"num_instructions" : 98466,
+				"num_method_refs" : 10600,
+				"num_methods" : 7158,
+				"num_protos" : 3172,
+				"num_static_values" : 69,
+				"num_strings" : 16147,
+				"num_type_lists" : 2281,
+				"num_types" : 3324
+			},
+			{
+				"num_annotations" : 1684,
+				"num_bytes" : 2405356,
+				"num_classes" : 2203,
+				"num_field_refs" : 6111,
+				"num_fields" : 5826,
+				"num_instructions" : 229104,
+				"num_method_refs" : 13077,
+				"num_methods" : 11383,
+				"num_protos" : 3166,
+				"num_static_values" : 108,
+				"num_strings" : 17927,
+				"num_type_lists" : 2018,
+				"num_types" : 2863
+			}
+		],
+		"lowering_stats" : 
+		{
+			"num_2addr_instructions" : 12379,
+			"num_move_added_for_check_cast" : 168
+		},
+		"pass_stats" : 
+		{
+			"BridgePass#1" : 
+			{
+				"bridges_removed_count" : 381,
+				"bridges_to_optimize_count" : 381,
+				"pass_order" : 2
+			},
+			"ConstantPropagationPass#1" : 
+			{
+				"num_branch_propagated" : 247,
+				"num_materialized_consts" : 355,
+				"pass_order" : 8
+			},
+			"CopyPropagationPass#1" : 
+			{
+				"pass_order" : 19,
+				"redundant_moves_eliminated" : 1130,
+				"source_regs_replaced_with_representative" : 2680
+			},
+			"DedupBlocksPass#1" : 
+			{
+				"blocks_removed" : 823,
+				"eligible_blocks" : 70370,
+				"pass_order" : 12
+			},
+			"DelSuperPass#1" : 
+			{
+				"num_class_relaxed_visibility" : 8,
+				"num_methods_relaxed_visibility" : 5,
+				"num_removed_trivial_methods" : 265,
+				"num_total_methods" : 94701,
+				"num_trivial_method_candidates" : 295,
+				"pass_order" : 5
+			},
+			"FinalInlinePass#1" : 
+			{
+				"encodable_clinits_replaced" : 2,
+				"num_finals_inlined" : 2072,
+				"num_removed_fields" : 2762,
+				"pass_order" : 4,
+				"static_finals_resolved" : 21
+			},
+			"LocalDcePass#1" : 
+			{
+				"num_dead_instructions" : 7746,
+				"num_unreachable_instructions" : 4,
+				"pass_order" : 9
+			},
+			"LocalDcePass#2" : 
+			{
+				"num_dead_instructions" : 365,
+				"num_unreachable_instructions" : 0,
+				"pass_order" : 20
+			},
+			"PeepholePass#1" : 
+			{
+				"Arith_AddLit_0" : 276,
+				"Arith_DivLit_Neg1" : 0,
+				"Arith_DivLit_Pos1" : 0,
+				"Arith_MulLit_Neg1" : 5,
+				"Arith_MulLit_Pos1" : 15,
+				"Coalesce_AppendString_AppendBoolean" : 0,
+				"Coalesce_AppendString_AppendBoolean_WithoutMoveResult" : 0,
+				"Coalesce_AppendString_AppendChar" : 0,
+				"Coalesce_AppendString_AppendChar_WithoutMoveResult" : 0,
+				"Coalesce_AppendString_AppendInt" : 3,
+				"Coalesce_AppendString_AppendInt_WithoutMoveResult" : 0,
+				"Coalesce_AppendString_AppendLongInt" : 2,
+				"Coalesce_AppendString_AppendLongInt_WithoutMoveResult" : 0,
+				"Coalesce_AppendString_AppendString" : 130,
+				"Coalesce_AppendString_AppendString_WithoutMoveResult" : 0,
+				"Coalesce_InitVoid_AppendString" : 3557,
+				"Coalesce_Init_AppendChar" : 14,
+				"Coalesce_Init_AppendChar_WithoutMoveResult" : 3,
+				"CompileTime_StringCompare" : 0,
+				"CompileTime_StringLength" : 51,
+				"Remove_AppendEmptyString" : 56,
+				"Remove_AppendEmptyString_WithoutMoveResult" : 0,
+				"Remove_LangClass_GetSimpleName" : 267,
+				"Remove_Redundant_Move" : 360,
+				"Replace_AputAget" : 14,
+				"Replace_AputAgetBoolean" : 0,
+				"Replace_AputAgetByte" : 6,
+				"Replace_AputAgetChar" : 0,
+				"Replace_AputAgetObject" : 17,
+				"Replace_AputAgetShort" : 1,
+				"Replace_AputAgetWide" : 0,
+				"Replace_StaticPutGet" : 3,
+				"Replace_StaticPutGetBoolean" : 2,
+				"Replace_StaticPutGetByte" : 0,
+				"Replace_StaticPutGetChar" : 0,
+				"Replace_StaticPutGetObject" : 247,
+				"Replace_StaticPutGetShort" : 0,
+				"Replace_StaticPutGetWide" : 0,
+				"Replace_ValueOfBoolean" : 0,
+				"Replace_ValueOfChar" : 0,
+				"Replace_ValueOfDouble" : 0,
+				"Replace_ValueOfFloat" : 0,
+				"Replace_ValueOfInt" : 3,
+				"Replace_ValueOfLongInt" : 3,
+				"pass_order" : 7,
+				"redundant_check_casts_removed" : 0
+			},
+			"PlastDevirtualizationPass#1" : 
+			{
+				"pass_order" : 0
+			},
+			"ReBindRefsPass#1" : 
+			{
+				"field_refs_candidates" : 6363,
+				"field_refs_rebound" : 808,
+				"method_refs_candidates" : 6717,
+				"method_refs_rebound" : 1859,
+				"pass_order" : 1
+			},
+			"RegAllocPass#1" : 
+			{
+				"coalesce_count" : 25478,
+				"net_moves" : -20646,
+				"param spilled too early" : 80,
+				"pass_order" : 18,
+				"reiteration_count" : 743,
+				"spill_count" : 4832
+			},
+			"RemoveEmptyClassesPass#1" : 
+			{
+				"num_empty_classes_removed" : 0,
+				"pass_order" : 15
+			},
+			"RemoveGotosPass#1" : 
+			{
+				"num_goto_removed" : 41,
+				"pass_order" : 11
+			},
+			"RemoveUnreachablePass#1" : 
+			{
+				"classes_removed" : 8212,
+				"fields_removed" : 22295,
+				"methods_removed" : 62737,
+				"num_ignore_check_strings" : 0,
+				"pass_order" : 10
+			},
+			"RemoverPass#1" : 
+			{
+				"pass_order" : 17
+			},
+			"ReorderInterfacesPass#1" : 
+			{
+				"pass_order" : 14
+			},
+			"ShortenSrcStringsPass#1" : 
+			{
+				"num_shortened_strings" : 2606,
+				"num_shortening_bytes_saved" : 54774,
+				"pass_order" : 16
+			},
+			"SimpleInlinePass#1" : 
+			{
+				"calls_inlined" : 19276,
+				"methods_removed" : 8917,
+				"pass_order" : 6
+			},
+			"SingleImplPass#1" : 
+			{
+				"num_invoke_intf_to_virt" : 0,
+				"num_removed_interfaces" : 0,
+				"pass_order" : 13
+			},
+			"SynthPass#1" : 
+			{
+				"constructors_removed_count" : 644,
+				"getter_methods_removed_count" : 1360,
+				"pass_order" : 3,
+				"wrapper_methods_removed_count" : 1366
+			}
+		},
+		"time_stats" : 
+		[
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Parsed ProGuard config file" : 0
+			},
+			{
+				"Load classes from dexes" : 0.5
+			},
+			{
+				"Deobfuscating dex elements" : 0.20000000000000001
+			},
+			{
+				"Initializing reachable classes" : 0.20000000000000001
+			},
+			{
+				"Process keep for whyareyoukeeping" : 0
+			},
+			{
+				"Process keep for classes and members" : 0.10000000000000001
+			},
+			{
+				"Process keep for assumenosideeffects" : 0
+			},
+			{
+				"Processing proguard rules" : 0.10000000000000001
+			},
+			{
+				"Redex_frontend" : 1
+			},
+			{
+				"PlastDevirtualizationPass (eval)" : 0
+			},
+			{
+				"ReBindRefsPass (eval)" : 0
+			},
+			{
+				"BridgePass (eval)" : 0
+			},
+			{
+				"SynthPass (eval)" : 0
+			},
+			{
+				"FinalInlinePass (eval)" : 0
+			},
+			{
+				"DelSuperPass (eval)" : 0
+			},
+			{
+				"SimpleInlinePass (eval)" : 0
+			},
+			{
+				"PeepholePass (eval)" : 0
+			},
+			{
+				"ConstantPropagationPass (eval)" : 0
+			},
+			{
+				"LocalDcePass (eval)" : 0
+			},
+			{
+				"RemoveUnreachablePass (eval)" : 0
+			},
+			{
+				"RemoveGotosPass (eval)" : 0
+			},
+			{
+				"DedupBlocksPass (eval)" : 0
+			},
+			{
+				"SingleImplPass (eval)" : 0
+			},
+			{
+				"ReorderInterfacesPass (eval)" : 0
+			},
+			{
+				"RemoveEmptyClassesPass (eval)" : 0
+			},
+			{
+				"ShortenSrcStringsPass (eval)" : 0
+			},
+			{
+				"RemoverPass (eval)" : 0
+			},
+			{
+				"RegAllocPass (eval)" : 0
+			},
+			{
+				"CopyPropagationPass (eval)" : 0
+			},
+			{
+				"LocalDcePass (eval)" : 0
+			},
+			{
+				"PlastDevirtualizationPass (run)" : 0.90000000000000002
+			},
+			{
+				"ReBindRefsPass (run)" : 0.10000000000000001
+			},
+			{
+				"BridgePass (run)" : 0.10000000000000001
+			},
+			{
+				"SynthPass (run)" : 0.29999999999999999
+			},
+			{
+				"FinalInlinePass (run)" : 0.20000000000000001
+			},
+			{
+				"DelSuperPass (run)" : 0.20000000000000001
+			},
+			{
+				"Devirtualizer inner" : 0
+			},
+			{
+				"Devirtualizer" : 0.10000000000000001
+			},
+			{
+				"SimpleInlinePass (run)" : 0.80000000000000004
+			},
+			{
+				"PeepholePass (run)" : 2.2000000000000002
+			},
+			{
+				"ConstantPropagationPass (run)" : 0.69999999999999996
+			},
+			{
+				"LocalDcePass (run)" : 0.69999999999999996
+			},
+			{
+				"Building method override graph" : 0.10000000000000001
+			},
+			{
+				"Marking" : 0.29999999999999999
+			},
+			{
+				"Sweep" : 0
+			},
+			{
+				"RemoveUnreachablePass (run)" : 0.29999999999999999
+			},
+			{
+				"RemoveGotosPass (run)" : 0.10000000000000001
+			},
+			{
+				"DedupBlocksPass (run)" : 0.10000000000000001
+			},
+			{
+				"SingleImplPass (run)" : 0.10000000000000001
+			},
+			{
+				"ReorderInterfacesPass (run)" : 0
+			},
+			{
+				"RemoveEmptyClassesPass (run)" : 0.10000000000000001
+			},
+			{
+				"ShortenSrcStringsPass (run)" : 0.10000000000000001
+			},
+			{
+				"RemoverPass (run)" : 0.10000000000000001
+			},
+			{
+				"RegAllocPass (run)" : 2.1000000000000001
+			},
+			{
+				"CopyPropagationPass (run)" : 0.20000000000000001
+			},
+			{
+				"LocalDcePass (run)" : 0.20000000000000001
+			},
+			{
+				"IRTypeChecker" : 0.5
+			},
+			{
+				"Running optimization passes" : 10.1
+			},
+			{
+				"Instruction lowering" : 0.10000000000000001
+			},
+			{
+				"Writing optimized dexes" : 0.80000000000000004
+			},
+			{
+				"Writing opt decisions data" : 0
+			},
+			{
+				"Writing stats" : 0.10000000000000001
+			},
+			{
+				"Redex_backend" : 0.90000000000000002
+			},
+			{
+				"Freeing global memory" : 0.20000000000000001
+			},
+			{
+				"redex-all main()" : 12.300000000000001
+			}
+		],
+		"total_stats" : 
+		{
+			"num_annotations" : 5397,
+			"num_bytes" : 4899592,
+			"num_classes" : 4948,
+			"num_field_refs" : 14691,
+			"num_fields" : 13615,
+			"num_instructions" : 388753,
+			"num_method_refs" : 30039,
+			"num_methods" : 22782,
+			"num_protos" : 8659,
+			"num_static_values" : 203,
+			"num_strings" : 44881,
+			"num_type_lists" : 5897,
+			"num_types" : 8381
+		}
+	}
+}
