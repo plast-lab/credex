@@ -12,6 +12,7 @@
 //used for redex Devirtualizer
 #include "Resolver.h"
 #include "Mutators.h"
+#include <ctime>
 
 
 struct CallCounter {
@@ -40,6 +41,7 @@ void PlastDevirtualizationPass::run_pass(DexStoresVector& stores, ConfigFiles& c
   /* also , fully devirtualise functions that are given from a separate file */
   /* filename should be declared at the config file*/
 
+  int stime = clock();
   std::cout << "PlastDevirtPass started..." << std::endl;
 
   std::string invokdevirtfile;
@@ -55,8 +57,11 @@ void PlastDevirtualizationPass::run_pass(DexStoresVector& stores, ConfigFiles& c
     pass_args.get("OnlyDevirtInvokInterface", false).asBool();
   zip_vv = pass_args.get("ZipVirtualVersion", false).asBool();
 
-  std::cout << invokdevirtfile << std::endl;
-  std::cout << methoddevirtfile << std::endl;
+  TRACE(VIRT, 1 , "Invocations to be devirtualized in file: \"%s\"\n",
+    invokdevirtfile.c_str());
+  TRACE(VIRT, 1 , "Methods to be devirtualized in file: \"%s\"\n",
+    methoddevirtfile.c_str());
+
   std::map <std::string, ClassScopeInfo*> devirt_ins;
   std::vector <PlastMethodSpec*> devirt_ms;
   /*the struct above are the input files data */
@@ -76,21 +81,23 @@ void PlastDevirtualizationPass::run_pass(DexStoresVector& stores, ConfigFiles& c
 
   //metrics names are not correlated with their corresponding
   //meaning, I just re-used the same structured
-  std::cout << "done..." << std::endl;
+  TRACE(VIRT, 1, "Finished\n");
   {  std::cout << "Devirtualized " << m_metrics.num_methods_not_using_this << " methods\nVirtual:"
     <<m_metrics.num_virtual_calls << "\nSuper:" << m_metrics.num_super_calls <<
     "\nDirect:" << m_metrics.num_direct_calls << std::endl;}
   //TODO clean up
 
-  std::cout << "Invok V:" << l_metrics.num_invok_virtual << std::endl;
-    std::cout << "TOTAL I:" << l_metrics.num_invok_interface << std::endl;
-  std::cout << "New M:" << l_metrics.num_new_methods << std::endl;
-  std::cout << "Extra OP:" << l_metrics.num_extra_opcodes << std::endl;
-  std::cout << "TOTAL INVOK:" << l_metrics.num_total_invocations << std::endl;
-  std::cout << "TOTAL METH:" << l_metrics.num_total_methods << std::endl;
-  std::cout << "TOTAL INTER:" << l_metrics.num_total_interface << std::endl;
-  return ;
+  TRACE(VIRT,1,"Invok V: %d\n", l_metrics.num_invok_virtual);
+  TRACE(VIRT,1,"TOTAL I: %d\n", l_metrics.num_invok_interface);
+  TRACE(VIRT,1,"Extra OP: %d\n", l_metrics.num_extra_opcodes);
+  TRACE(VIRT,1,"TOTAL INVOK: %d\n", l_metrics.num_total_invocations);
+  TRACE(VIRT,1,"TOTAL METH: %d\n", l_metrics.num_total_methods);
+  TRACE(VIRT,1,"TOTAL INTER: %d\n",  l_metrics.num_total_interface);
 
+
+
+
+  return;
 }
 
 
@@ -103,7 +110,7 @@ void PlastDevirtualizationPass::parse_instructions_i(
   file.open(filename);
   /*parse the file's contents */
   if (!file.good()) {
-    std::cout << "Plast:File not found: " << filename << std::endl;
+    TRACE(VIRT, 1, "File missing: \"%s\"\n", filename);
     return;
   }
   int lineId = -1;
@@ -149,7 +156,7 @@ void PlastDevirtualizationPass::parse_instructions_m(
   file.open(filename);
   /*parse the file's contents */
   if (!file.good()) {
-    std::cout << "Plast:File not found: " << filename << std::endl;
+    TRACE(VIRT, 1, "File missing: \"%s\"\n", filename);
     return;
   }
   int lineId = -1;
@@ -200,7 +207,7 @@ void PlastDevirtualizationPass::scope_insert(
 
 void PlastDevirtualizationPass::devirt_methods(std::vector<DexClass*>& scope,
   std::vector<PlastMethodSpec*> methods) {
-  std::cout << "Starting devirtualizment " << std::endl;
+  TRACE(VIRT, 1, "Doop Devirtualization pass starts\n");
   // create a vector to call the already built-in function
   std::unordered_set <DexMethod*> devirtualizable_methods;
   //here I need to get the DexMethod * from the class for each file entry
@@ -269,6 +276,10 @@ void PlastDevirtualizationPass::devirt_targets(
   }
   auto lfm = ccls[spec]->info;
   auto irc = method->get_code();
+  if (irc == nullptr) {
+    TRACE(VIRT, 2,"Null method code found\n");
+    return;
+  }
   auto ircit = InstructionIterable(irc);
   for (auto it1 = ircit.begin(); it1 != ircit.end(); it1++) {
     IRInstruction* insn = it1->insn;
@@ -396,7 +407,7 @@ void PlastDevirtualizationPass::devirtualize(IRInstruction *insn, PlastMethodSpe
   DexClass *cls = type_class( DexType::get_type(DexString::make_string(
     spec->cls.c_str())));
   if (cls == NULL) {
-    std::cout << "Plast: Class not found!" << std::endl;
+    TRACE(VIRT, 1, "Class `%s` of method `%s`", spec->cls.c_str(), spec->name.c_str());
       return ;
   }
   // we don't want to devirtualize invocations that aren't
