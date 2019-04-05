@@ -24,7 +24,6 @@
 /m4/ltversion.m4
 /m4/lt~obsolete.m4
 /missing
-/redex
 /redex-all
 /redex.tar.gz
 /credex
@@ -38,3 +37,4 @@
 redex-src-strings-map.txt
 pyredex/__pycache__
 /includes
+/doop-results/

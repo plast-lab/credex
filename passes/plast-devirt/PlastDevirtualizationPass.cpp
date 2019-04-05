@@ -67,7 +67,7 @@ void PlastDevirtualizationPass::run_pass(DexStoresVector& stores, ConfigFiles& c
   /*the struct above are the input files data */
 
   parse_instructions_i(&devirt_ins, invokdevirtfile);
-  reset_metrics();
+  //reset_metrics();
   parse_instructions_m(&devirt_ms, methoddevirtfile);
   //config for devirtualizing only vmethods
 
@@ -110,7 +110,7 @@ void PlastDevirtualizationPass::parse_instructions_i(
   file.open(filename);
   /*parse the file's contents */
   if (!file.good()) {
-    TRACE(VIRT, 1, "File missing: \"%s\"\n", filename);
+    TRACE(VIRT, 1, "File missing: \"%s\"\n", filename.c_str());
     return;
   }
   int lineId = -1;
@@ -156,7 +156,7 @@ void PlastDevirtualizationPass::parse_instructions_m(
   file.open(filename);
   /*parse the file's contents */
   if (!file.good()) {
-    TRACE(VIRT, 1, "File missing: \"%s\"\n", filename);
+    TRACE(VIRT, 1, "File missing: \"%s\"\n", filename.c_str());
     return;
   }
   int lineId = -1;
@@ -214,22 +214,28 @@ void PlastDevirtualizationPass::devirt_methods(std::vector<DexClass*>& scope,
   //in order to devirtualise. To do this I have to look it up
   //in the vmethods vector , which is a bit inefficient , but
   //the only way that can be done given the currect version's API
-  for (auto method: methods) {
+  std::cout << "Meths: " << methods.size() << std::endl;
+  int count_methods = 0;
+  for (auto &method: methods) {
     auto cls = type_class(DexType::get_type(method->cls.c_str()));
     if (cls == NULL) {
         std::cout << "Plast: Class not found!" << std::endl;
         continue;
     }
-    std::vector<DexMethod*> vmeths= std::vector<DexMethod*>(cls->get_vmethods());
+    std::vector<DexMethod*>& vmeths= cls->get_vmethods();
     for (auto const &m : vmeths) {
       if (method->compare(m)) {
         devirtualizable_methods.insert(m);
         delete method;
+        count_methods;
         break;
+      } else {
+        ;
       }
       //again ignore naming, I just re-use an existing struct
     }
   }
+  std::cout << "Vector: " << devirtualizable_methods.size() << std::endl;
   //TODO
   //should also work on the case of methods that dont require this...
   staticize_methods_using_this(scope, devirtualizable_methods);
@@ -274,6 +280,7 @@ void PlastDevirtualizationPass::devirt_targets(
   if  (ccls.find(spec) == ccls.end()) {
     return;
   }
+  std::cout << spec.cls << "." << spec.name << std::endl;
   auto lfm = ccls[spec]->info;
   auto irc = method->get_code();
   if (irc == nullptr) {

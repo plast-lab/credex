@@ -1,7 +1,9 @@
 #include <iostream>
 #include <algorithm>
+#include <stdexcept>
 
 #include "PlastDVParser.h"
+
 
 
 
@@ -16,11 +18,17 @@ std::string PlastDoopParser::parse_invok_site(std::string str, PlastInvocSite& s
   ptr = 0;
   PlastDoopParser::get_callee(str, ptr, site);
   PlastDoopParser::disc_empty(str, ptr);
-  site.n = std::stoi(str.substr(ptr, str.length()-ptr));
+  auto str_number = str.substr(ptr, str.length()-ptr);
+
+  try {
+    site.n = std::stoi(str.substr(ptr, str.length()-ptr));
+    std::string ns = std::to_string(site.n);
+    ptr += ns.length();
+  } catch(const std::invalid_argument& ia) {
+    site.n = -1;
+  }
 
 
-  std::string ns = std::to_string(site.n);
-  ptr += ns.length();
   return str.substr(ptr, str.length()-ptr);
 }
 
@@ -174,7 +182,7 @@ PlastMethodSpec::PlastMethodSpec(const DexMethodRef *dm) {
   this->name.assign((dm->get_name()->str()));
   this->rtype.assign(std::string(dm->get_proto()->get_rtype()->get_name()->str()));
   this->args = new std::vector<std::string> ();
-
+  
   for (size_t i=0; i < dm->get_proto()->get_args()->get_type_list().size(); i++) {
     this->args->push_back(dm->get_proto()->get_args()->get_type_list()[i]->get_name()->str());
   }
