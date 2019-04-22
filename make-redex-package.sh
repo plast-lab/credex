@@ -7,6 +7,9 @@ CURRENT_DIR="${PWD}"
 HEAD_HASH=`git rev-parse HEAD`
 REDEX_ZIP="${CURRENT_DIR}/credex-${HEAD_HASH}.zip"
 
+# Workaround for static linking failure on Fedora 29.
+export CFLAGS="-L$(realpath .libs)"
+
 autoreconf -ivf
 ./configure --prefix=${TMP_DIR}
 make -j4
