@@ -140,6 +140,5 @@ seeder_SOURCES = \
 seeder_LDADD = \
 	libredex.la \
 	libredex_tools.la \
-	$(BOOST_PROGRAM_OPTIONS_LIB) 
-
-
+	$(BOOST_SYSTEM_LIB) \
+	$(BOOST_PROGRAM_OPTIONS_LIB)
