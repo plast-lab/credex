@@ -1,0 +1,10 @@
+Package: credex
+Version: 0.1
+Section: base
+Priority: optional
+Architecture: amd64
+Depends: libboost-filesystem1.65.1, libboost-program-options1.65.1, libboost-iostreams1.65.1, libjsoncpp1
+Maintainer: George Fourtounis <gfour@di.uoa.gr>
+Description: CRedex
+ .
+ Redex extended for program optimization driven by Doop.
