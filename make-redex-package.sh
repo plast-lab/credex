@@ -2,6 +2,9 @@
 
 # Helper script to create redex archive.
 
+# Stop on first error.
+set -e
+
 TMP_DIR=`mktemp -d`
 CURRENT_DIR="${PWD}"
 HEAD_HASH=`git rev-parse HEAD`
