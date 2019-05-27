@@ -2,10 +2,13 @@
 #include <algorithm>
 #include <stdexcept>
 
+#include <cstring>
+
 #include "PlastDVParser.h"
 
 
 
+static const char statprefix[] = "static_";
 
 
 std::string PlastDoopParser::parse_invok_site(std::string str, PlastInvocSite& site) {
@@ -177,26 +180,20 @@ bool operator==(const PlastMethodSpec& l, const PlastMethodSpec& r) {
   return true;
 }
 
+
 PlastMethodSpec::PlastMethodSpec(const DexMethodRef *dm) {
 
-  this->name.assign((dm->get_name()->str()));
-  this->rtype.assign(std::string(dm->get_proto()->get_rtype()->get_name()->str()));
-  this->args = new std::vector<std::string> ();
-  
-  for (size_t i=0; i < dm->get_proto()->get_args()->get_type_list().size(); i++) {
-    this->args->push_back(dm->get_proto()->get_args()->get_type_list()[i]->get_name()->str());
+  size_t i = 0;
+  const std::string& fun_name = dm->get_name()->str();
+  if (fun_name.find(statprefix) != -1) {
+    this->name.assign(fun_name.substr(strlen(statprefix), fun_name.length()-strlen(statprefix)));
+    i = 1;
+    std::cout << "New: " << this->name << std::endl;
+    std::cerr << "Old: " << fun_name << std::endl;
   }
-}
-
-PlastMethodSpec::PlastMethodSpec(const DexMethodRef *dm, bool stat_version) {
-
-
-  this->name.assign(std::string("static_")+(dm->get_name()->str()));
   this->rtype.assign(std::string(dm->get_proto()->get_rtype()->get_name()->str()));
   this->args = new std::vector<std::string> ();
-  this->args->push_back(
-    dm->get_class()->get_name()->c_str());
-  for (size_t i=0; i < dm->get_proto()->get_args()->get_type_list().size(); i++) {
+  for (i; i < dm->get_proto()->get_args()->get_type_list().size(); i++) {
     this->args->push_back(dm->get_proto()->get_args()->get_type_list()[i]->get_name()->str());
   }
 }

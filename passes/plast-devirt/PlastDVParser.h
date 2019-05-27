@@ -17,8 +17,7 @@ class PlastMethodSpec {
   std::vector<std::string> *args;
 
   PlastMethodSpec():args(NULL){}
-  PlastMethodSpec(const DexMethodRef* dm);
-  PlastMethodSpec(const DexMethodRef* , bool);  //look for the static version
+  PlastMethodSpec(const DexMethodRef* dm);  //look for the static version
   PlastMethodSpec(std::string name, std::vector<std::string> * vptr, std::string rtype):
 	name(name), rtype(rtype), args(vptr){ }
 

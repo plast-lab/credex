@@ -41,6 +41,7 @@ class PlastDevirtualizationPass : public Pass {
   private:
     DevirtualizerMetrics m_metrics;
     localDevirtutalizerMetrics l_metrics;
+    std::set<PlastMethodSpec> zipped_functions;
 
     void parse_instructions_m(std::vector<PlastMethodSpec*>*, std::string);
     void parse_instructions_i(std::map <std::string, ClassScopeInfo*> *, std::string);
@@ -61,6 +62,7 @@ class PlastDevirtualizationPass : public Pass {
     void gather_statistics(const std::vector<DexClass*>&);
 
     void reset_metrics() { m_metrics = DevirtualizerMetrics();}
+
 };
 
 

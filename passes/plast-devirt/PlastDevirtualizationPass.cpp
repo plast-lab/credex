@@ -266,6 +266,11 @@ void PlastDevirtualizationPass::devirt_targets(
 
     for (auto const& vmeth: vmeths) {
       PlastMethodSpec spec(vmeth);
+      std::cout << spec.name << std::endl;
+      if (zipped_functions.find(spec) != zipped_functions.end()) {
+        std::cerr << "Zipped function!" << std::endl;
+        continue;
+      }
       devirt_targets(spec , ccls, vmeth);
     }
   }
@@ -273,7 +278,8 @@ void PlastDevirtualizationPass::devirt_targets(
 
 
 void PlastDevirtualizationPass::devirt_targets(
-	const PlastMethodSpec& spec, std::map<PlastMethodSpec, MethodScopeInfo*>& ccls, DexMethod* const& method) {
+	const PlastMethodSpec& spec, std::map<PlastMethodSpec, MethodScopeInfo*>& ccls,
+   DexMethod* const& method) {
 
     //std::cout << spec.name << spec.rtype  <<  std::endl;
 
@@ -288,7 +294,9 @@ void PlastDevirtualizationPass::devirt_targets(
     return;
   }
   auto ircit = InstructionIterable(irc);
-  for (auto it1 = ircit.begin(); it1 != ircit.end(); it1++) {
+  auto it1 = ircit.begin();
+  auto it3 = ircit.end();
+  for (it1; it1 != it3; it1++) {
     IRInstruction* insn = it1->insn;
     if (!insn->has_method()) {
       continue;
@@ -476,7 +484,8 @@ void PlastDevirtualizationPass::zip_virtual_version(DexClass* cls,
     std::cerr << "VirtualZip: Something went wrong" << std::endl;
     return;
   }
-
+  this->zipped_functions.insert(*mp);
+  std::cout << "Added " << (mp->name) << std::endl;
   IRCode* code = method->get_code();
   auto irc = InstructionIterable(code);
 
