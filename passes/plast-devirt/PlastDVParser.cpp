@@ -190,6 +190,8 @@ PlastMethodSpec::PlastMethodSpec(const DexMethodRef *dm) {
     i = 1;
     std::cout << "New: " << this->name << std::endl;
     std::cerr << "Old: " << fun_name << std::endl;
+  } else {
+    this->name.assign((dm->get_name()->str()));
   }
   this->rtype.assign(std::string(dm->get_proto()->get_rtype()->get_name()->str()));
   this->args = new std::vector<std::string> ();

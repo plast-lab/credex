@@ -214,7 +214,6 @@ void PlastDevirtualizationPass::devirt_methods(std::vector<DexClass*>& scope,
   //in order to devirtualise. To do this I have to look it up
   //in the vmethods vector , which is a bit inefficient , but
   //the only way that can be done given the currect version's API
-  std::cout << "Meths: " << methods.size() << std::endl;
   int count_methods = 0;
   for (auto &method: methods) {
     auto cls = type_class(DexType::get_type(method->cls.c_str()));
@@ -266,7 +265,6 @@ void PlastDevirtualizationPass::devirt_targets(
 
     for (auto const& vmeth: vmeths) {
       PlastMethodSpec spec(vmeth);
-      std::cout << spec.name << std::endl;
       if (zipped_functions.find(spec) != zipped_functions.end()) {
         std::cerr << "Zipped function!" << std::endl;
         continue;
@@ -279,24 +277,28 @@ void PlastDevirtualizationPass::devirt_targets(
 
 void PlastDevirtualizationPass::devirt_targets(
 	const PlastMethodSpec& spec, std::map<PlastMethodSpec, MethodScopeInfo*>& ccls,
-   DexMethod* const& method) {
+  DexMethod* const& method) {
+  struct zip_method_info {
+    DexClass* cls;
+    PlastMethodSpec* spec;
+    DexMethodRef* method;
+
+  };
 
     //std::cout << spec.name << spec.rtype  <<  std::endl;
 
   if  (ccls.find(spec) == ccls.end()) {
     return;
   }
-  std::cout << spec.cls << "." << spec.name << std::endl;
   auto lfm = ccls[spec]->info;
   auto irc = method->get_code();
   if (irc == nullptr) {
     TRACE(VIRT, 2,"Null method code found\n");
     return;
   }
+  std::vector<zip_method_info> tobe_zipped;
   auto ircit = InstructionIterable(irc);
-  auto it1 = ircit.begin();
-  auto it3 = ircit.end();
-  for (it1; it1 != it3; it1++) {
+  for (auto it1 = ircit.begin(); it1 != ircit.end(); it1++) {
     IRInstruction* insn = it1->insn;
     if (!insn->has_method()) {
       continue;
@@ -310,13 +312,24 @@ void PlastDevirtualizationPass::devirt_targets(
 
       	if (methodvector->at(i).first == 0) {
       	  //devirtualize the invocation
-      	  devirtualize(insn, methodvector->at(i).second);
-      	  //add casts if required
+          DexClass* dclass = NULL;
+          DexMethodRef* dmeth = NULL;
+          devirtualize(insn, methodvector->at(i).second, dclass, dmeth);
+          if (dclass != NULL && dmeth != NULL && this->zip_vv) {
+            zip_method_info zmethod;
+            zmethod.cls = dclass;
+            zmethod.spec =  methodvector->at(i).second;
+            zmethod.method = dmeth;
+            tobe_zipped.push_back(zmethod);
+
+          } else {
+            delete methodvector->at(i).second;
+          }
+          //add casts if required
       	  //auto it2 = irc->iterator_to(*it1);
       	  //add_cast(insn ,irc, methodvector->at(i).second, it2);
 
       	  //clean up
-      	  delete methodvector->at(i).second;
       	  methodvector->erase(methodvector->begin()+i);
       	  i--;
       	}
@@ -325,6 +338,13 @@ void PlastDevirtualizationPass::devirt_targets(
       }
     }
   }
+  //now do function zips if required
+  for (auto& method: tobe_zipped) {
+    zip_virtual_version(method.cls, method.spec, method.method);
+    method.spec->args = NULL;
+    delete method.spec;
+  }
+
 }
 
 void PlastDevirtualizationPass::create_static_copy(DexClass *cls,
@@ -417,9 +437,9 @@ void PlastDevirtualizationPass::create_static_copy(DexClass *cls,
 }
 
 
-void PlastDevirtualizationPass::devirtualize(IRInstruction *insn, PlastMethodSpec *spec) {
-  DexMethodRef *ref;
-  DexClass *cls = type_class( DexType::get_type(DexString::make_string(
+void PlastDevirtualizationPass::devirtualize(IRInstruction *insn, PlastMethodSpec *spec,
+DexClass*& cls,DexMethodRef*& ref) {
+  cls = type_class( DexType::get_type(DexString::make_string(
     spec->cls.c_str())));
   if (cls == NULL) {
     TRACE(VIRT, 1, "Class `%s` of method `%s`", spec->cls.c_str(), spec->name.c_str());
@@ -430,8 +450,9 @@ void PlastDevirtualizationPass::devirtualize(IRInstruction *insn, PlastMethodSpe
 
   create_static_copy(cls, *spec, ref, insn->opcode() == OPCODE_INVOKE_INTERFACE);
 
-  if (ref == NULL)
+  if (ref == NULL) {
     return;
+  }
 
   if (is_invoke_virtual(insn->opcode()))
     l_metrics.num_invok_virtual++;
@@ -439,8 +460,6 @@ void PlastDevirtualizationPass::devirtualize(IRInstruction *insn, PlastMethodSpe
     l_metrics.num_invok_interface++;
 
   insn->set_opcode(OPCODE_INVOKE_STATIC)->set_method(ref);
-  if (this->zip_vv)
-    zip_virtual_version(cls, spec, ref);
 }
 
 

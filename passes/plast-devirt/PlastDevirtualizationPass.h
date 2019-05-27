@@ -50,7 +50,7 @@ class PlastDevirtualizationPass : public Pass {
     void devirt_methods(std::vector<DexClass*>&, std::vector<PlastMethodSpec*>);
     void devirt_targets(std::vector<DexClass*>&, std::map <std::string, ClassScopeInfo*>&);
     void devirt_targets(const PlastMethodSpec& , std::map<PlastMethodSpec, MethodScopeInfo*>&, DexMethod* const&);
-    void devirtualize(IRInstruction*, PlastMethodSpec*);
+    void devirtualize(IRInstruction*, PlastMethodSpec*, DexClass*&, DexMethodRef*&);
     void add_cast(IRInstruction*, IRCode*, PlastMethodSpec *, IRList::iterator&);
     void create_static_copy(DexClass *, const PlastMethodSpec&, DexMethodRef*&,
       bool ii = true);
